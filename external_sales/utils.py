@@ -12,9 +12,15 @@ def compute_engineer_analytics(profile):
     Compute analytics dict for a single DecoratorEngineerProfile.
     Used in EngineerDetailView context and export.
     """
-    linked_orders = profile.linked_orders.select_related("order")
+    linked_orders = profile.linked_orders.select_related("order", "order__customer")
 
-    total_linked_customers = profile.linked_customers.filter(is_active=True).count()
+    # العملاء الفعليون: العملاء الفريدون من الطلبات المربوطة + العملاء المربوطون يدوياً
+    unique_order_customers = (
+        linked_orders.values("order__customer").distinct().count()
+    )
+    manual_linked_customers = profile.linked_customers.filter(is_active=True).count()
+    total_unique_clients = max(unique_order_customers, manual_linked_customers)
+
     total_linked_orders = linked_orders.count()
 
     order_aggregates = linked_orders.aggregate(
@@ -51,18 +57,32 @@ def compute_engineer_analytics(profile):
     last_activity = max(filter(None, [last_contact, last_order]), default=None)
 
     # Per-engineer monthly data for charts (last 6 months)
-    contacts_by_month = list(
+    # Build complete 6-month labels even if no data
+    today = date.today()
+    all_months = []
+    for i in range(5, -1, -1):
+        m = today.replace(day=1) - timedelta(days=i * 30)
+        all_months.append(m.strftime("%Y-%m"))
+    # Deduplicate preserving order
+    seen = set()
+    month_labels = []
+    for m in all_months:
+        if m not in seen:
+            seen.add(m)
+            month_labels.append(m)
+
+    contacts_by_month_qs = list(
         EngineerContactLog.objects.filter(
-            engineer=profile, contact_date__gte=six_months_ago
+            engineer=profile, contact_date__date__gte=six_months_ago
         )
         .annotate(month=TruncMonth("contact_date"))
         .values("month")
         .annotate(cnt=Count("id"))
         .order_by("month")
     )
-    orders_by_month = list(
+    orders_by_month_qs = list(
         EngineerLinkedOrder.objects.filter(
-            engineer=profile, linked_at__gte=six_months_ago
+            engineer=profile, linked_at__date__gte=six_months_ago
         )
         .annotate(month=TruncMonth("linked_at"))
         .values("month")
@@ -70,12 +90,14 @@ def compute_engineer_analytics(profile):
         .order_by("month")
     )
 
-    monthly_months = [str(r["month"])[:7] for r in contacts_by_month]
-    monthly_contacts = [r["cnt"] for r in contacts_by_month]
-    monthly_orders = [r["cnt"] for r in orders_by_month]
+    contact_map = {str(r["month"])[:7]: r["cnt"] for r in contacts_by_month_qs}
+    order_map = {str(r["month"])[:7]: r["cnt"] for r in orders_by_month_qs}
+
+    monthly_contacts = [contact_map.get(m, 0) for m in month_labels]
+    monthly_orders = [order_map.get(m, 0) for m in month_labels]
 
     return {
-        "total_linked_customers": total_linked_customers,
+        "total_linked_customers": manual_linked_customers,
         "total_linked_orders": total_linked_orders,
         "total_orders_value": order_aggregates["total_value"] or Decimal("0"),
         "commission_pending": order_aggregates["pending"] or Decimal("0"),
@@ -85,14 +107,14 @@ def compute_engineer_analytics(profile):
         "top_materials": top_materials,
         "last_activity": last_activity,
         # Aliases used in templates
-        "total_clients": total_linked_customers,
+        "total_clients": total_unique_clients,
         "total_orders": total_linked_orders,
         "total_value": order_aggregates["total_value"] or Decimal("0"),
         "pending_commission": order_aggregates["pending"] or Decimal("0"),
         "approved_commission": order_aggregates["approved"] or Decimal("0"),
         "paid_commission": order_aggregates["paid"] or Decimal("0"),
-        # Monthly chart data
-        "monthly_months": monthly_months,
+        # Monthly chart data (always 6 months)
+        "monthly_months": month_labels,
         "monthly_contacts": monthly_contacts,
         "monthly_orders": monthly_orders,
     }

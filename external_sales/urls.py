@@ -115,6 +115,21 @@ urlpatterns = [
         name="api_order_search",
     ),
     path(
+        "decorator/api/find-by-code/",
+        views_decorator.FindEngineerByCodeAjax.as_view(),
+        name="api_find_engineer_by_code",
+    ),
+    path(
+        "decorator/followups/",
+        views_decorator.AllUpcomingFollowupsView.as_view(),
+        name="all_followups",
+    ),
+    path(
+        "decorator/contacts/all/",
+        views_decorator.AllContactLogsView.as_view(),
+        name="all_contacts",
+    ),
+    path(
         "decorator/api/available-orders/<str:customer_code>/",
         views_decorator.AvailableOrdersAjax.as_view(),
         name="api_available_orders",

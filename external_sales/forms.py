@@ -10,7 +10,45 @@ from .models import (
 )
 
 
+EGYPT_GOVERNORATES = [
+    ("", "— اختر المحافظة —"),
+    ("القاهرة", "القاهرة"),
+    ("الإسكندرية", "الإسكندرية"),
+    ("الجيزة", "الجيزة"),
+    ("الشرقية", "الشرقية"),
+    ("الدقهلية", "الدقهلية"),
+    ("البحيرة", "البحيرة"),
+    ("المنوفية", "المنوفية"),
+    ("الغربية", "الغربية"),
+    ("القليوبية", "القليوبية"),
+    ("كفر الشيخ", "كفر الشيخ"),
+    ("دمياط", "دمياط"),
+    ("بورسعيد", "بورسعيد"),
+    ("الإسماعيلية", "الإسماعيلية"),
+    ("السويس", "السويس"),
+    ("الفيوم", "الفيوم"),
+    ("بني سويف", "بني سويف"),
+    ("المنيا", "المنيا"),
+    ("أسيوط", "أسيوط"),
+    ("سوهاج", "سوهاج"),
+    ("قنا", "قنا"),
+    ("الأقصر", "الأقصر"),
+    ("أسوان", "أسوان"),
+    ("البحر الأحمر", "البحر الأحمر"),
+    ("شمال سيناء", "شمال سيناء"),
+    ("جنوب سيناء", "جنوب سيناء"),
+    ("مطروح", "مطروح"),
+    ("الوادي الجديد", "الوادي الجديد"),
+]
+
+
 class DecoratorEngineerProfileForm(forms.ModelForm):
+    city = forms.ChoiceField(
+        choices=EGYPT_GOVERNORATES,
+        required=False,
+        label="المحافظة",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
     class Meta:
         model = DecoratorEngineerProfile
         fields = [
@@ -36,7 +74,6 @@ class DecoratorEngineerProfileForm(forms.ModelForm):
             "company_office_name": forms.TextInput(attrs={"class": "form-control"}),
             "years_of_experience": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
             "area_of_operation": forms.TextInput(attrs={"class": "form-control"}),
-            "city": forms.TextInput(attrs={"class": "form-control"}),
             "instagram_handle": forms.TextInput(attrs={"class": "form-control", "dir": "ltr"}),
             "portfolio_url": forms.URLInput(attrs={"class": "form-control", "dir": "ltr"}),
             "linkedin_url": forms.URLInput(attrs={"class": "form-control", "dir": "ltr"}),
@@ -66,6 +103,13 @@ class DecoratorEngineerProfileForm(forms.ModelForm):
 class EngineerProfileEditForm(forms.ModelForm):
     """Edit form — excludes customer (cannot change once created)"""
 
+    city = forms.ChoiceField(
+        choices=EGYPT_GOVERNORATES,
+        required=False,
+        label="المحافظة",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
     class Meta:
         model = DecoratorEngineerProfile
         fields = [
@@ -89,7 +133,6 @@ class EngineerProfileEditForm(forms.ModelForm):
             "company_office_name": forms.TextInput(attrs={"class": "form-control"}),
             "years_of_experience": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
             "area_of_operation": forms.TextInput(attrs={"class": "form-control"}),
-            "city": forms.TextInput(attrs={"class": "form-control"}),
             "instagram_handle": forms.TextInput(attrs={"class": "form-control", "dir": "ltr"}),
             "portfolio_url": forms.URLInput(attrs={"class": "form-control", "dir": "ltr"}),
             "linkedin_url": forms.URLInput(attrs={"class": "form-control", "dir": "ltr"}),
@@ -104,6 +147,13 @@ class EngineerProfileEditForm(forms.ModelForm):
 
 
 class ContactLogForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.initial.get("contact_date") and not self.data.get("contact_date"):
+            from django.utils import timezone
+            now = timezone.localtime(timezone.now())
+            self.fields["contact_date"].initial = now.strftime("%Y-%m-%dT%H:%M")
+
     class Meta:
         model = EngineerContactLog
         fields = [

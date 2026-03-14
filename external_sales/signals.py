@@ -409,3 +409,55 @@ def send_appointment_whatsapp(sender, instance, **kwargs):
         )
     except Exception as e:
         logger.error(f"Error sending WhatsApp appointment confirmation: {e}")
+
+
+# ═══════════════════════════════════════════════════════════════
+#  AUTO-LINK ORDERS FOR ENGINEER'S OWN CUSTOMER
+# ═══════════════════════════════════════════════════════════════
+
+def _auto_link_order_to_engineer(order):
+    """
+    ربط الطلب تلقائياً بملف المهندس إذا كان العميل نفسه مهندس ديكور.
+    يستخدم نسبة العمولة الافتراضية من ملف المهندس.
+    """
+    try:
+        customer = order.customer
+        if not customer:
+            return
+        profile = getattr(customer, "decorator_profile", None)
+        if profile is None:
+            try:
+                profile = DecoratorEngineerProfile.objects.select_related(
+                    "customer"
+                ).get(customer=customer)
+            except DecoratorEngineerProfile.DoesNotExist:
+                return
+
+        # Create link if not already exists (order has OneToOne relation)
+        if EngineerLinkedOrder.objects.filter(order=order).exists():
+            return
+
+        linked = EngineerLinkedOrder(
+            engineer=profile,
+            order=order,
+            link_type="auto",
+            commission_rate=0,
+        )
+        linked.calculate_commission()
+        linked.save()
+        logger.info(
+            f"[auto-link] Order {order.order_number} linked to engineer {profile.designer_code}"
+        )
+    except Exception as e:
+        logger.error(f"[auto-link] Error auto-linking order: {e}")
+
+
+@receiver(post_save, sender="orders.Order")
+def auto_link_engineer_order(sender, instance, created, **kwargs):
+    """
+    عند حفظ طلب جديد: إذا كان عميل الطلب هو مهندس ديكور
+    يتم ربط الطلب تلقائياً بملفه دون تدخل يدوي.
+    """
+    if not created:
+        return
+    _auto_link_order_to_engineer(instance)

@@ -1,0 +1,120 @@
+{% extends "external_sales/base_dept.html" %}
+{% load static %}
+
+{% block breadcrumbs %}
+<li class="breadcrumb-item"><a href="{% url 'external_sales:index' %}">المبيعات الخارجية</a></li>
+<li class="breadcrumb-item"><a href="{% url 'external_sales:decorator_dashboard' %}">مهندسو الديكور</a></li>
+<li class="breadcrumb-item active">سجل النشاطات</li>
+{% endblock %}
+
+{% block dept_content %}
+
+{# ── Header ── #}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0"><i class="fas fa-history me-2 text-primary"></i>كل النشاطات</h4>
+        <small class="text-muted">جميع سجلات التواصل مع مهندسي الديكور</small>
+    </div>
+    <a href="{% url 'external_sales:decorator_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-right me-1"></i>العودة
+    </a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+        <span class="fw-bold small">
+            <i class="fas fa-list me-1"></i>
+            إجمالي: {{ paginator.count }} سجل
+        </span>
+    </div>
+    <div class="card-body p-0">
+        {% if contact_logs %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>النوع</th>
+                        <th>المهندس</th>
+                        <th>النتيجة</th>
+                        <th>التاريخ</th>
+                        <th>المتابعة القادمة</th>
+                        <th>ملاحظات</th>
+                        <th>بواسطة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in contact_logs %}
+                    <tr>
+                        <td>
+                            {% if log.contact_type == 'call' %}<i class="fas fa-phone text-primary"></i>
+                            {% elif log.contact_type == 'whatsapp' %}<i class="fab fa-whatsapp text-success"></i>
+                            {% elif log.contact_type == 'meeting' %}<i class="fas fa-handshake text-info"></i>
+                            {% elif log.contact_type == 'visit' %}<i class="fas fa-map-marker-alt text-warning"></i>
+                            {% elif log.contact_type == 'email' %}<i class="fas fa-envelope text-secondary"></i>
+                            {% else %}<i class="fas fa-comment text-muted"></i>{% endif %}
+                            {{ log.get_contact_type_display }}
+                        </td>
+                        <td>
+                            <a href="{% url 'external_sales:engineer_detail' log.engineer.pk %}">
+                                {{ log.engineer.customer.name }}
+                            </a>
+                            <div class="text-muted" style="font-size:.72rem;">{{ log.engineer.designer_code }}</div>
+                        </td>
+                        <td><span class="badge bg-secondary" style="font-size:.72rem;">{{ log.get_outcome_display }}</span></td>
+                        <td style="white-space:nowrap;">{{ log.contact_date|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            {% if log.next_followup_date %}
+                                <span class="{% if log.next_followup_date < today %}text-danger fw-bold{% else %}text-success{% endif %}">
+                                    {{ log.next_followup_date|date:"Y-m-d" }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted" style="max-width:200px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">{{ log.notes|truncatechars:60 }}</td>
+                        <td>{{ log.created_by.get_full_name|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {# Pagination #}
+        {% if is_paginated %}
+        <div class="d-flex justify-content-center py-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">السابق</a>
+                    </li>
+                    {% endif %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">التالي</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center text-muted py-4">
+            <i class="fas fa-inbox fa-2x mb-2 d-block opacity-50"></i>
+            لا توجد سجلات تواصل بعد
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block dept_js %}
+<script>
+// Pass today's date for overdue styling
+const today = new Date("{{ today|date:'Y-m-d' }}");
+</script>
+{% endblock %}

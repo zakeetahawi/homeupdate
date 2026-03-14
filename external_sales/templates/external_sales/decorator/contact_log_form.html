@@ -41,6 +41,11 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="id_contact_date" class="form-label fw-bold">تاريخ ووقت التواصل <span class="text-danger">*</span></label>
+                        {{ form.contact_date }}
+                    </div>
+
+                    <div class="mb-3">
                         <label for="id_notes" class="form-label">ملاحظات</label>
                         <textarea name="notes" id="id_notes" class="form-control" rows="3">{{ form.notes.value|default:'' }}</textarea>
                     </div>

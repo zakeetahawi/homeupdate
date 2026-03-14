@@ -24,6 +24,20 @@
     </div>
 </div>
 
+{# ── Inactive Filter Alert ── #}
+{% if is_inactive_filter %}
+<div class="alert alert-warning d-flex align-items-center gap-2 mb-3 py-2" role="alert">
+    <i class="fas fa-filter text-warning fa-lg"></i>
+    <div>
+        <strong>فلتر نشط:</strong> عرض المهندسون بدون تواصل منذ أكثر من 60 يوماً
+        — <strong>{{ page_obj.paginator.count }} مهندس</strong>
+        <a href="{% url 'external_sales:engineer_list' %}" class="btn btn-sm btn-outline-secondary ms-2">
+            <i class="fas fa-times me-1"></i>إلغاء الفلتر
+        </a>
+    </div>
+</div>
+{% endif %}
+
 {# ── Filter Bar ── #}
 <div class="card shadow-sm mb-3">
     <div class="card-body py-2">
@@ -41,10 +55,10 @@
                 </select>
             </div>
             <div class="col-lg-2 col-md-3">
-                <select name="city" class="form-select form-select-sm">
-                    <option value="">كل المدن</option>
-                    {% for c in cities %}
-                    <option value="{{ c }}" {% if request.GET.city == c %}selected{% endif %}>{{ c }}</option>
+                <select name="branch" class="form-select form-select-sm">
+                    <option value="">كل الفروع</option>
+                    {% for b in branches %}
+                    <option value="{{ b.pk }}" {% if request.GET.branch == b.pk|stringformat:"d" %}selected{% endif %}>{{ b.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -69,13 +83,13 @@
     <div class="card-body p-0">
         {% if engineers %}
         <div class="table-responsive">
-            <table class="table table-hover table-sm mb-0">
-                <thead class="table-light">
+            <table class="table table-hover table-sm table-bordered mb-0 align-middle text-center">
+                <thead class="table-dark">
                     <tr>
-                        <th>#</th>
-                        <th>اسم المهندس</th>
+                        <th style="width:40px">#</th>
+                        <th class="text-start">اسم المهندس</th>
                         <th>كود المصمم</th>
-                        <th>المدينة</th>
+                        <th>الفرع</th>
                         <th>الهاتف</th>
                         <th>العملاء</th>
                         <th>الطلبات</th>
@@ -87,29 +101,29 @@
                 <tbody>
                     {% for eng in engineers %}
                     <tr>
-                        <td>{{ forloop.counter|add:page_obj.start_index|add:"-1" }}</td>
-                        <td>
+                        <td class="text-muted small">{{ forloop.counter|add:page_obj.start_index|add:"-1" }}</td>
+                        <td class="text-start">
                             <a href="{% url 'external_sales:engineer_detail' eng.pk %}" class="fw-bold text-decoration-none">
                                 {{ eng.customer.name }}
                             </a>
                         </td>
-                        <td><code>{{ eng.designer_code }}</code></td>
-                        <td>{{ eng.city|default:"-" }}</td>
-                        <td dir="ltr">{{ eng.customer.phone|default:"-" }}</td>
-                        <td>{{ eng.total_clients_count }}</td>
-                        <td>{{ eng.total_orders_count }}</td>
-                        <td>{{ eng.last_contact_date|date:"Y-m-d"|default:"—" }}</td>
+                        <td><code class="text-primary">{{ eng.designer_code }}</code></td>
+                        <td class="small">{{ eng.customer.branch.name|default:"—" }}</td>
+                        <td dir="ltr" class="small">{{ eng.customer.phone|default:"—" }}</td>
+                        <td><span class="badge bg-secondary bg-opacity-75">{{ eng.total_clients_count }}</span></td>
+                        <td><span class="badge bg-primary bg-opacity-75">{{ eng.total_orders_count }}</span></td>
+                        <td class="small text-muted">{{ eng.last_contact_date|date:"Y-m-d"|default:"—" }}</td>
                         <td><span class="priority-badge priority-{{ eng.priority }}">{{ eng.get_priority_display }}</span></td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <a href="{% url 'external_sales:add_contact' eng.pk %}" class="btn btn-outline-success quick-action-btn" title="تواصل">
-                                    <i class="fas fa-phone"></i>
-                                </a>
-                                <a href="{% url 'external_sales:link_customer' eng.pk %}" class="btn btn-outline-primary quick-action-btn" title="ربط عميل">
-                                    <i class="fas fa-user-plus"></i>
-                                </a>
                                 <a href="{% url 'external_sales:link_order' eng.pk %}" class="btn btn-outline-info quick-action-btn" title="ربط طلب">
                                     <i class="fas fa-shopping-cart"></i>
+                                </a>
+                                <a href="{% url 'external_sales:engineer_detail' eng.pk %}" class="btn btn-outline-primary quick-action-btn" title="عرض الملف">
+                                    <i class="fas fa-user"></i>
+                                </a>
+                                <a href="{% url 'external_sales:add_contact' eng.pk %}" class="btn btn-outline-success quick-action-btn" title="تسجيل تواصل">
+                                    <i class="fas fa-phone"></i>
                                 </a>
                             </div>
                         </td>
@@ -149,4 +163,5 @@
         {% endif %}
     </div>
 </div>
+
 {% endblock %}

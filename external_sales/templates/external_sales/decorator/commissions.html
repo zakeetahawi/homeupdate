@@ -21,7 +21,7 @@
         <div class="kpi-card kpi-warning d-flex justify-content-between align-items-center">
             <div>
                 <div class="kpi-value">{{ summary.pending|floatformat:0|default:"0" }}</div>
-                <div class="kpi-label">عمولات معلقة (ر.س)</div>
+                <div class="kpi-label">عمولات معلقة ({{ currency_symbol }})</div>
             </div>
             <div class="kpi-icon"><i class="fas fa-clock"></i></div>
         </div>
@@ -30,7 +30,7 @@
         <div class="kpi-card kpi-success d-flex justify-content-between align-items-center">
             <div>
                 <div class="kpi-value">{{ summary.approved|floatformat:0|default:"0" }}</div>
-                <div class="kpi-label">عمولات معتمدة (ر.س)</div>
+                <div class="kpi-label">عمولات معتمدة ({{ currency_symbol }})</div>
             </div>
             <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
         </div>
@@ -39,7 +39,7 @@
         <div class="kpi-card kpi-info d-flex justify-content-between align-items-center">
             <div>
                 <div class="kpi-value">{{ summary.paid|floatformat:0|default:"0" }}</div>
-                <div class="kpi-label">عمولات مدفوعة (ر.س)</div>
+                <div class="kpi-label">عمولات مدفوعة ({{ currency_symbol }})</div>
             </div>
             <div class="kpi-icon"><i class="fas fa-money-bill-wave"></i></div>
         </div>

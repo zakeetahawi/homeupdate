@@ -64,14 +64,29 @@ class DecoratorDashboardView(DecoratorDeptRequiredMixin, TemplateView):
             .order_by("last_contact_date")
         )
 
-        ctx["inactive_engineers"] = inactive_qs
+        ctx["inactive_engineers"] = list(inactive_qs)
 
+        # Engineers needing attention: no contact in 30 days AND no linked orders/customers
+        attention_threshold = today - timedelta(days=30)
+        ctx["needs_attention_engineers"] = list(
+            DecoratorEngineerProfile.objects.annotate(
+                orders_count=Count("linked_orders", distinct=True),
+                customers_count=Count("linked_customers", distinct=True),
+            )
+            .filter(
+                Q(last_contact_date__lt=attention_threshold) | Q(last_contact_date__isnull=True),
+                orders_count=0,
+                customers_count=0,
+            )
+            .select_related("customer", "assigned_staff")
+            .order_by("last_contact_date")
+        )
+
+        inactive_list = ctx["inactive_engineers"]
         ctx["stats"] = {
             "total": DecoratorEngineerProfile.objects.count(),
-            "active": DecoratorEngineerProfile.objects.filter(
-                priority__in=["vip", "active"]
-            ).count(),
-            "inactive_60d": inactive_qs.count(),
+            "active": DecoratorEngineerProfile.objects.exclude(priority="cold").count(),
+            "inactive_60d": len(inactive_list),
             "this_month": DecoratorEngineerProfile.objects.filter(
                 created_at__date__gte=today.replace(day=1)
             ).count(),
@@ -106,10 +121,31 @@ class EngineerListView(DecoratorDeptRequiredMixin, ListView):
     context_object_name = "engineers"
     paginate_by = 25
 
+    def get(self, request, *args, **kwargs):
+        """إذا كان البحث كوداً دقيقاً → انتقل مباشرةً لصفحة المهندس"""
+        search = request.GET.get("search", "").strip()
+        if search:
+            exact = DecoratorEngineerProfile.objects.filter(
+                designer_code__iexact=search
+            ).first()
+            if exact:
+                return redirect(
+                    "external_sales:engineer_detail", pk=exact.pk
+                )
+        return super().get(request, *args, **kwargs)
+
     def get_queryset(self):
         qs = DecoratorEngineerProfile.objects.select_related(
             "customer", "customer__branch", "assigned_staff"
         ).order_by("-created_at")
+
+        # فلتر خاص: بدون تواصل +60 يوم
+        if self.request.GET.get("inactive"):
+            threshold = date.today() - timedelta(days=60)
+            qs = qs.filter(
+                Q(last_contact_date__lt=threshold) | Q(last_contact_date__isnull=True)
+            ).order_by("last_contact_date")
+            return qs
 
         search = self.request.GET.get("search", "").strip()
         if search:
@@ -129,6 +165,10 @@ class EngineerListView(DecoratorDeptRequiredMixin, ListView):
         if city:
             qs = qs.filter(city=city)
 
+        branch = self.request.GET.get("branch")
+        if branch:
+            qs = qs.filter(customer__branch_id=branch)
+
         staff = self.request.GET.get("staff")
         if staff:
             qs = qs.filter(assigned_staff_id=staff)
@@ -139,6 +179,9 @@ class EngineerListView(DecoratorDeptRequiredMixin, ListView):
         ctx = super().get_context_data(**kwargs)
         from accounts.models import User
 
+        ctx["is_inactive_filter"] = bool(self.request.GET.get("inactive"))
+        from accounts.models import Branch
+        ctx["branches"] = Branch.objects.filter(is_active=True).order_by("name")
         ctx["cities"] = (
             DecoratorEngineerProfile.objects.exclude(city="")
             .values_list("city", flat=True)
@@ -595,6 +638,92 @@ class DesignerCustomerSearchAjax(DecoratorDeptRequiredMixin, View):
 class OrderSearchAjax(DecoratorDeptRequiredMixin, View):
     """AJAX endpoint for Select2 order search."""
 
+
+class AllUpcomingFollowupsView(DecoratorDeptRequiredMixin, TemplateView):
+    """صفحة مستقلة لجميع المتابعات القادمة"""
+
+    template_name = "external_sales/decorator/all_followups.html"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        today = date.today()
+        ctx["today"] = today
+        ctx["followups"] = (
+            EngineerContactLog.objects.filter(
+                next_followup_date__gte=today,
+                next_followup_date__lte=today + timedelta(days=30),
+            )
+            .select_related("engineer__customer", "engineer__assigned_staff", "created_by")
+            .order_by("next_followup_date")
+        )
+        ctx["overdue_followups"] = (
+            EngineerContactLog.objects.filter(
+                next_followup_date__lt=today,
+            )
+            .select_related("engineer__customer", "engineer__assigned_staff", "created_by")
+            .order_by("next_followup_date")
+        )
+        return ctx
+
+
+class AllContactLogsView(DecoratorDeptRequiredMixin, ListView):
+    """صفحة كل سجلات التواصل مع المهندسين"""
+
+    model = EngineerContactLog
+    template_name = "external_sales/decorator/all_contacts.html"
+    context_object_name = "contact_logs"
+    paginate_by = 50
+
+    def get_queryset(self):
+        return EngineerContactLog.objects.select_related(
+            "engineer__customer", "created_by"
+        ).order_by("-contact_date")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["today"] = date.today()
+        return ctx
+
+
+class FindEngineerByCodeAjax(DecoratorDeptRequiredMixin, View):
+    """AJAX: البحث عن مهندس بكود المصمم — مثل find_customer_by_phone تماماً"""
+
+    def get(self, request, *args, **kwargs):
+        code = request.GET.get("code", "").strip()
+        if not code:
+            return JsonResponse({"found": False, "error": "كود المصمم مطلوب"}, status=400)
+
+        code = convert_arabic_numbers_to_english(code)
+        profiles = (
+            DecoratorEngineerProfile.objects.filter(
+                Q(designer_code__iexact=code) | Q(designer_code__icontains=code)
+            )
+            .select_related("customer", "customer__branch", "assigned_staff")
+            .order_by("designer_code")
+        )
+
+        if profiles.exists():
+            data = []
+            for p in profiles:
+                data.append(
+                    {
+                        "pk": p.pk,
+                        "name": p.customer.name,
+                        "designer_code": p.designer_code,
+                        "phone": p.customer.phone or "",
+                        "city": p.city or "",
+                        "priority": p.get_priority_display(),
+                        "company": p.company_office_name or "",
+                        "assigned_staff": p.assigned_staff.get_full_name() if p.assigned_staff else "",
+                        "url": f"/external-sales/decorator/engineers/{p.pk}/",
+                        "is_exact": p.designer_code.upper() == code.upper(),
+                    }
+                )
+            return JsonResponse({"found": True, "engineers": data, "count": len(data)})
+
+        return JsonResponse({"found": False})
+
+
     def get(self, request):
         from orders.models import Order
 
@@ -702,14 +831,22 @@ class ChartTopByOrdersAjax(DecoratorDeptRequiredMixin, View):
 
 class ChartTopMaterialsAjax(DecoratorDeptRequiredMixin, View):
     def get(self, request):
+        from orders.models import OrderItem
+
+        # أكثر الخامات/المنتجات طلباً من خلال الطلبات المرتبطة بمهندسين
         data = list(
-            EngineerMaterialInterest.objects.values("material_name")
-            .annotate(total=Sum("request_count"))
+            OrderItem.objects.filter(
+                order__engineer_link__isnull=False,
+                product_name_snapshot__isnull=False,
+            )
+            .exclude(product_name_snapshot="")
+            .values("product_name_snapshot")
+            .annotate(total=Count("id"))
             .order_by("-total")[:10]
         )
         return JsonResponse(
             {
-                "labels": [r["material_name"] for r in data],
+                "labels": [r["product_name_snapshot"] for r in data],
                 "values": [r["total"] for r in data],
             }
         )
@@ -719,26 +856,36 @@ class ChartMonthlyActivityAjax(DecoratorDeptRequiredMixin, View):
     def get(self, request):
         six_months_ago = date.today() - timedelta(days=180)
 
-        contacts_by_month = list(
-            EngineerContactLog.objects.filter(contact_date__gte=six_months_ago)
+        contacts_map = {
+            str(r["month"])[:7]: r["cnt"]
+            for r in EngineerContactLog.objects.filter(contact_date__gte=six_months_ago)
             .annotate(month=TruncMonth("contact_date"))
             .values("month")
             .annotate(cnt=Count("id"))
-            .order_by("month")
-        )
-        orders_by_month = list(
-            EngineerLinkedOrder.objects.filter(linked_at__gte=six_months_ago)
-            .annotate(month=TruncMonth("linked_at"))
+        }
+        orders_map = {
+            str(r["month"])[:7]: r["cnt"]
+            for r in EngineerLinkedOrder.objects.filter(
+                order__order_date__gte=six_months_ago
+            )
+            .annotate(month=TruncMonth("order__order_date"))
             .values("month")
             .annotate(cnt=Count("id"))
-            .order_by("month")
-        )
+        }
+
+        # بناء محور شهري كامل للستة أشهر الماضية
+        all_months = []
+        d = (date.today() - timedelta(days=180)).replace(day=1)
+        today_m = date.today().replace(day=1)
+        while d <= today_m:
+            all_months.append(str(d)[:7])
+            d = d.replace(month=d.month + 1) if d.month < 12 else d.replace(year=d.year + 1, month=1)
 
         return JsonResponse(
             {
-                "contacts": [r["cnt"] for r in contacts_by_month],
-                "orders": [r["cnt"] for r in orders_by_month],
-                "months": [str(r["month"])[:7] for r in contacts_by_month],
+                "months": all_months,
+                "contacts": [contacts_map.get(m, 0) for m in all_months],
+                "orders": [orders_map.get(m, 0) for m in all_months],
             }
         )
 

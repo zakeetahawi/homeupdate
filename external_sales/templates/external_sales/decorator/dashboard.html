@@ -6,6 +6,38 @@
 <li class="breadcrumb-item active">قسم مهندسي الديكور</li>
 {% endblock %}
 
+{% block dept_css %}
+<style>
+    /* Compact nav cards */
+    .nav-card {
+        display: flex; align-items: center; gap: .6rem;
+        padding: .6rem .9rem;
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 1px 6px rgba(0,0,0,.08);
+        text-decoration: none;
+        transition: box-shadow .15s, transform .1s;
+        border-right: 4px solid transparent;
+    }
+    .nav-card:hover { box-shadow: 0 3px 12px rgba(0,0,0,.14); transform: translateY(-1px); }
+    .nav-card .nc-icon { font-size: 1.2rem; width: 34px; text-align: center; }
+    .nav-card .nc-label { font-weight: 600; font-size: .85rem; color: #333; }
+
+    /* Compact KPI */
+    .kpi-card { padding: .6rem .9rem !important; }
+    .kpi-card .kpi-value { font-size: 1.5rem !important; }
+    .kpi-card .kpi-label { font-size: .75rem !important; }
+    .kpi-card .kpi-icon { font-size: 1.4rem !important; }
+
+    /* Alert / inactive header links */
+    .alert-card-title { text-decoration: none; color: inherit; }
+    .alert-card-title:hover { text-decoration: underline; }
+
+    /* Show-more row */
+    .show-more-row td { background: #f8f9fa; text-align: center; padding: .35rem; }
+</style>
+{% endblock %}
+
 {% block dept_content %}
 {# ── Header ── #}
 <div class="dept-header d-flex justify-content-between align-items-center">
@@ -20,56 +52,72 @@
         <a href="{% url 'external_sales:decorator_orders' %}" class="btn btn-outline-light btn-sm">
             <i class="fas fa-shopping-cart me-1"></i>الطلبات
         </a>
+        {% if request.user.is_superuser or request.user.is_decorator_dept_manager or request.user.is_external_sales_director or request.user.is_sales_manager %}
+        <div class="dropdown d-inline-block ms-1">
+            <button class="btn btn-warning btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-tools me-1"></i>أدوات المدير
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><h6 class="dropdown-header">تصدير</h6></li>
+                <li>
+                    <a class="dropdown-item" href="{% url 'external_sales:export_engineers' %}">
+                        <i class="fas fa-file-excel me-2 text-success"></i>تصدير بيانات المهندسين
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{% url 'external_sales:export_commissions' %}">
+                        <i class="fas fa-file-excel me-2 text-warning"></i>تصدير العمولات
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li><h6 class="dropdown-header">استيراد</h6></li>
+                <li>
+                    <a class="dropdown-item" href="{% url 'external_sales:import_engineers' %}">
+                        <i class="fas fa-file-upload me-2 text-primary"></i>استيراد مهندسين من Excel
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{% url 'external_sales:import_template' %}">
+                        <i class="fas fa-download me-2 text-secondary"></i>تحميل قالب الاستيراد
+                    </a>
+                </li>
+            </ul>
+        </div>
+        {% endif %}
     </div>
 </div>
 
-{# ── Quick Navigation ── #}
-<div class="row g-3 mb-4">
-    <div class="col-lg-3 col-md-6">
-        <a href="{% url 'external_sales:decorator_dashboard' %}" class="text-decoration-none">
-            <div class="card border-0 shadow-sm h-100 text-center py-3" style="border-right: 4px solid #1a237e !important;">
-                <div class="card-body py-2">
-                    <i class="fas fa-tachometer-alt fa-2x mb-2" style="color:#1a237e"></i>
-                    <h6 class="mb-0 fw-bold text-dark">لوحة التحكم</h6>
-                </div>
-            </div>
+{# ── Quick Navigation (compact) ── #}
+<div class="row g-2 mb-3">
+    <div class="col-6 col-md-3">
+        <a href="{% url 'external_sales:decorator_dashboard' %}" class="nav-card" style="border-color:#1a237e;">
+            <div class="nc-icon" style="color:#1a237e;"><i class="fas fa-tachometer-alt"></i></div>
+            <div class="nc-label">لوحة التحكم</div>
         </a>
     </div>
-    <div class="col-lg-3 col-md-6">
-        <a href="{% url 'external_sales:engineer_list' %}" class="text-decoration-none">
-            <div class="card border-0 shadow-sm h-100 text-center py-3" style="border-right: 4px solid #2e7d32 !important;">
-                <div class="card-body py-2">
-                    <i class="fas fa-id-badge fa-2x mb-2" style="color:#2e7d32"></i>
-                    <h6 class="mb-0 fw-bold text-dark">قائمة المهندسين</h6>
-                </div>
-            </div>
+    <div class="col-6 col-md-3">
+        <a href="{% url 'external_sales:engineer_list' %}" class="nav-card" style="border-color:#2e7d32;">
+            <div class="nc-icon" style="color:#2e7d32;"><i class="fas fa-id-badge"></i></div>
+            <div class="nc-label">قائمة المهندسين</div>
         </a>
     </div>
-    <div class="col-lg-3 col-md-6">
-        <a href="{% url 'external_sales:commissions' %}" class="text-decoration-none">
-            <div class="card border-0 shadow-sm h-100 text-center py-3" style="border-right: 4px solid #f57c00 !important;">
-                <div class="card-body py-2">
-                    <i class="fas fa-coins fa-2x mb-2" style="color:#f57c00"></i>
-                    <h6 class="mb-0 fw-bold text-dark">العمولات</h6>
-                </div>
-            </div>
+    <div class="col-6 col-md-3">
+        <a href="{% url 'external_sales:commissions' %}" class="nav-card" style="border-color:#f57c00;">
+            <div class="nc-icon" style="color:#f57c00;"><i class="fas fa-coins"></i></div>
+            <div class="nc-label">العمولات</div>
         </a>
     </div>
-    <div class="col-lg-3 col-md-6">
-        <a href="{% url 'external_sales:decorator_orders' %}" class="text-decoration-none">
-            <div class="card border-0 shadow-sm h-100 text-center py-3" style="border-right: 4px solid #0288d1 !important;">
-                <div class="card-body py-2">
-                    <i class="fas fa-link fa-2x mb-2" style="color:#0288d1"></i>
-                    <h6 class="mb-0 fw-bold text-dark">الطلبات المرتبطة</h6>
-                </div>
-            </div>
+    <div class="col-6 col-md-3">
+        <a href="{% url 'external_sales:decorator_orders' %}" class="nav-card" style="border-color:#0288d1;">
+            <div class="nc-icon" style="color:#0288d1;"><i class="fas fa-link"></i></div>
+            <div class="nc-label">الطلبات المرتبطة</div>
         </a>
     </div>
 </div>
 
-{# ── KPI Cards ── #}
-<div class="row g-3 mb-4">
-    <div class="col-lg-3 col-md-6">
+{# ── KPI Cards (compact) ── #}
+<div class="row g-2 mb-3">
+    <div class="col-6 col-lg-3">
         <div class="kpi-card kpi-primary d-flex justify-content-between align-items-center">
             <div>
                 <div class="kpi-value">{{ stats.total|default:0 }}</div>
@@ -78,7 +126,7 @@
             <div class="kpi-icon"><i class="fas fa-users"></i></div>
         </div>
     </div>
-    <div class="col-lg-3 col-md-6">
+    <div class="col-6 col-lg-3">
         <div class="kpi-card kpi-success d-flex justify-content-between align-items-center">
             <div>
                 <div class="kpi-value">{{ stats.active|default:0 }}</div>
@@ -87,7 +135,7 @@
             <div class="kpi-icon"><i class="fas fa-user-check"></i></div>
         </div>
     </div>
-    <div class="col-lg-3 col-md-6">
+    <div class="col-6 col-lg-3">
         <div class="kpi-card kpi-info d-flex justify-content-between align-items-center">
             <div>
                 <div class="kpi-value">{{ stats.this_month|default:0 }}</div>
@@ -96,28 +144,36 @@
             <div class="kpi-icon"><i class="fas fa-user-plus"></i></div>
         </div>
     </div>
-    <div class="col-lg-3 col-md-6">
-        <div class="kpi-card kpi-warning d-flex justify-content-between align-items-center">
-            <div>
-                <div class="kpi-value">{{ stats.inactive_60d|default:0 }}</div>
-                <div class="kpi-label">بدون تواصل +60 يوم</div>
+    <div class="col-6 col-lg-3">
+        <a href="{% url 'external_sales:engineer_list' %}?inactive=1" class="text-decoration-none d-block">
+            <div class="kpi-card kpi-warning d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="kpi-value">{{ stats.inactive_60d|default:0 }}</div>
+                    <div class="kpi-label">بدون تواصل +60 يوم</div>
+                </div>
+                <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
             </div>
-            <div class="kpi-icon"><i class="fas fa-exclamation-triangle"></i></div>
-        </div>
+        </a>
     </div>
 </div>
 
 <div class="row g-3">
     {# ── Upcoming Follow-ups ── #}
     <div class="col-lg-6">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-white fw-bold">
-                <i class="fas fa-bell me-1 text-warning"></i> متابعات قادمة (7 أيام)
+        <div class="card shadow-sm">
+            <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center py-2">
+                <a href="{% url 'external_sales:all_followups' %}" class="alert-card-title">
+                    <i class="fas fa-bell me-1 text-warning"></i> متابعات قادمة (7 أيام)
+                    {% if upcoming_followups %}<span class="badge bg-warning text-dark ms-1">{{ upcoming_followups|length }}</span>{% endif %}
+                </a>
+                <a href="{% url 'external_sales:all_followups' %}" class="btn btn-outline-warning btn-sm" style="font-size:.75rem;">
+                    <i class="fas fa-external-link-alt me-1"></i>الكل
+                </a>
             </div>
             <div class="card-body p-0">
                 {% if upcoming_followups %}
                 <div class="table-responsive">
-                    <table class="table table-sm table-hover mb-0">
+                    <table class="table table-sm table-hover mb-0" id="tbFollowups">
                         <thead class="table-light">
                             <tr>
                                 <th>المهندس</th>
@@ -128,9 +184,9 @@
                         </thead>
                         <tbody>
                             {% for log in upcoming_followups %}
-                            <tr>
+                            <tr{% if forloop.counter > 10 %} class="extra-row-followups d-none"{% endif %}>
                                 <td>
-                                    <a href="{% url 'external_sales:engineer_detail' log.engineer.pk %}">
+                                    <a href="{% url 'external_sales:engineer_detail' log.engineer.pk %}#tab-contacts">
                                         {{ log.engineer.customer.name }}
                                     </a>
                                 </td>
@@ -146,9 +202,16 @@
                         </tbody>
                     </table>
                 </div>
+                {% if upcoming_followups|length > 10 %}
+                <div class="text-center py-1 border-top">
+                    <button class="btn btn-link btn-sm text-muted" onclick="toggleExtra('followups', this)">
+                        <i class="fas fa-chevron-down me-1"></i>عرض {{ upcoming_followups|length|add:"-10" }} إضافي
+                    </button>
+                </div>
+                {% endif %}
                 {% else %}
-                <div class="text-center text-muted py-4">
-                    <i class="fas fa-check-circle fa-2x mb-2 d-block"></i>
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-check-circle fa-lg mb-1 d-block text-success"></i>
                     لا توجد متابعات قادمة
                 </div>
                 {% endif %}
@@ -158,14 +221,20 @@
 
     {# ── Inactive Engineers Alert ── #}
     <div class="col-lg-6">
-        <div class="card shadow-sm h-100">
-            <div class="card-header bg-white fw-bold">
-                <i class="fas fa-user-clock me-1 text-danger"></i> مهندسون بدون تواصل (+60 يوم)
+        <div class="card shadow-sm">
+            <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center py-2">
+                <a href="{% url 'external_sales:engineer_list' %}?inactive=1" class="alert-card-title">
+                    <i class="fas fa-user-clock me-1 text-danger"></i> مهندسون بدون تواصل (+60 يوم)
+                    {% if inactive_engineers %}<span class="badge bg-danger ms-1">{{ inactive_engineers|length }}</span>{% endif %}
+                </a>
+                <a href="{% url 'external_sales:engineer_list' %}?inactive=1" class="btn btn-outline-danger btn-sm" style="font-size:.75rem;">
+                    <i class="fas fa-external-link-alt me-1"></i>الكل
+                </a>
             </div>
             <div class="card-body p-0">
                 {% if inactive_engineers %}
                 <div class="table-responsive">
-                    <table class="table table-sm table-hover mb-0">
+                    <table class="table table-sm table-hover mb-0" id="tbInactive">
                         <thead class="table-light">
                             <tr>
                                 <th>المهندس</th>
@@ -176,7 +245,7 @@
                         </thead>
                         <tbody>
                             {% for eng in inactive_engineers %}
-                            <tr class="{% if not eng.last_contact_date %}table-danger{% else %}table-warning{% endif %}">
+                            <tr class="{% if not eng.last_contact_date %}table-danger{% else %}table-warning{% endif %}{% if forloop.counter > 10 %} extra-row-inactive d-none{% endif %}">
                                 <td>
                                     <a href="{% url 'external_sales:engineer_detail' eng.pk %}">
                                         {{ eng.customer.name }}
@@ -188,7 +257,7 @@
                                 </td>
                                 <td>
                                     <a href="{% url 'external_sales:add_contact' eng.pk %}" class="btn btn-warning btn-sm quick-action-btn">
-                                        <i class="fas fa-phone"></i> تواصل
+                                        <i class="fas fa-phone"></i>
                                     </a>
                                 </td>
                             </tr>
@@ -196,9 +265,16 @@
                         </tbody>
                     </table>
                 </div>
+                {% if inactive_engineers|length > 10 %}
+                <div class="text-center py-1 border-top">
+                    <button class="btn btn-link btn-sm text-muted" onclick="toggleExtra('inactive', this)">
+                        <i class="fas fa-chevron-down me-1"></i>عرض {{ inactive_engineers|length|add:"-10" }} إضافي
+                    </button>
+                </div>
+                {% endif %}
                 {% else %}
-                <div class="text-center text-muted py-4">
-                    <i class="fas fa-smile fa-2x mb-2 d-block"></i>
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-smile fa-lg mb-1 d-block text-success"></i>
                     جميع المهندسين تم التواصل معهم مؤخراً
                 </div>
                 {% endif %}
@@ -207,13 +283,64 @@
     </div>
 </div>
 
+{# ── Needs-Attention Card ── #}
+{% if needs_attention_engineers %}
+<div class="row g-3 mt-1">
+    <div class="col-12">
+        <div class="card shadow-sm border-0" style="border-right: 4px solid #d32f2f !important;">
+            <div class="card-header fw-bold py-2" style="background: #fff3f3;">
+                <i class="fas fa-exclamation-triangle me-1 text-danger"></i>
+                مهندسون يحتاجون متابعة عاجلة
+                <span class="badge bg-danger ms-2">{{ needs_attention_engineers.count }}</span>
+                <small class="fw-normal text-muted ms-2">— لا تواصل منذ 30+ يوم، وصفر طلبات وعملاء</small>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>المهندس</th>
+                                <th>الكود</th>
+                                <th>آخر تواصل</th>
+                                <th>الأولوية</th>
+                                <th>موظف المتابعة</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for eng in needs_attention_engineers %}
+                            <tr class="table-danger{% if forloop.counter > 10 %} extra-row-attention d-none{% endif %}">
+                                <td><a href="{% url 'external_sales:engineer_detail' eng.pk %}" class="fw-bold text-decoration-none text-dark">{{ eng.customer.name }}</a></td>
+                                <td><span class="badge bg-light text-dark border">{{ eng.designer_code }}</span></td>
+                                <td>{% if eng.last_contact_date %}<span class="text-danger">{{ eng.last_contact_date|date:"Y-m-d" }}</span>{% else %}<span class="text-muted fst-italic">لم يتم التواصل أبداً</span>{% endif %}</td>
+                                <td><span class="priority-badge priority-{{ eng.priority }}">{{ eng.get_priority_display }}</span></td>
+                                <td>{{ eng.assigned_staff.get_full_name|default:"—" }}</td>
+                                <td><a href="{% url 'external_sales:add_contact' eng.pk %}" class="btn btn-danger btn-sm quick-action-btn"><i class="fas fa-phone me-1"></i>تواصل الآن</a></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if needs_attention_engineers|length > 10 %}
+                <div class="text-center py-1 border-top">
+                    <button class="btn btn-link btn-sm text-muted" onclick="toggleExtra('attention', this)">
+                        <i class="fas fa-chevron-down me-1"></i>عرض الباقي
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {# ── Recent Activity ── #}
 <div class="row g-3 mt-1">
     <div class="col-12">
         <div class="card shadow-sm">
-            <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+            <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center py-2">
                 <span><i class="fas fa-history me-1"></i> آخر النشاطات</span>
-                <a href="{% url 'external_sales:engineer_list' %}" class="btn btn-outline-primary btn-sm">عرض الكل</a>
+                <a href="{% url 'external_sales:all_contacts' %}" class="btn btn-outline-primary btn-sm" style="font-size:.75rem;">عرض الكل</a>
             </div>
             <div class="card-body p-0">
                 {% if recent_contacts %}
@@ -240,13 +367,9 @@
                                     {% else %}<i class="fas fa-comment text-muted"></i>{% endif %}
                                     {{ log.get_contact_type_display }}
                                 </td>
-                                <td>
-                                    <a href="{% url 'external_sales:engineer_detail' log.engineer.pk %}">
-                                        {{ log.engineer.customer.name }}
-                                    </a>
-                                </td>
-                                <td><span class="badge bg-secondary">{{ log.get_outcome_display }}</span></td>
-                                <td>{{ log.contact_date|date:"Y-m-d H:i" }}</td>
+                                <td><a href="{% url 'external_sales:engineer_detail' log.engineer.pk %}">{{ log.engineer.customer.name }}</a></td>
+                                <td><span class="badge bg-secondary" style="font-size:.72rem;">{{ log.get_outcome_display }}</span></td>
+                                <td style="white-space:nowrap;">{{ log.contact_date|date:"Y-m-d H:i" }}</td>
                                 <td>{{ log.created_by.get_full_name|default:"-" }}</td>
                             </tr>
                             {% endfor %}
@@ -254,7 +377,7 @@
                     </table>
                 </div>
                 {% else %}
-                <div class="text-center text-muted py-4">لا توجد نشاطات مسجلة بعد</div>
+                <div class="text-center text-muted py-3">لا توجد نشاطات مسجلة بعد</div>
                 {% endif %}
             </div>
         </div>
@@ -262,32 +385,32 @@
 </div>
 
 {# ── Performance Charts ── #}
-<h5 class="fw-bold mt-4 mb-3"><i class="fas fa-chart-bar me-2"></i>تحليلات الأداء</h5>
+<h5 class="fw-bold mt-4 mb-2"><i class="fas fa-chart-bar me-2"></i>تحليلات الأداء</h5>
 <div class="row g-3 mb-3">
     <div class="col-lg-6">
         <div class="card shadow-sm h-100">
-            <div class="card-header bg-white fw-bold">أعلى 10 مهندسين بالإيرادات</div>
-            <div class="card-body"><canvas id="chartTopRevenue" height="280"></canvas></div>
+            <div class="card-header bg-white fw-bold py-2 small">أعلى 10 مهندسين بالإيرادات</div>
+            <div class="card-body p-2"><canvas id="chartTopRevenue" height="240"></canvas></div>
         </div>
     </div>
     <div class="col-lg-6">
         <div class="card shadow-sm h-100">
-            <div class="card-header bg-white fw-bold">أعلى 10 مهندسين بعدد الطلبات</div>
-            <div class="card-body"><canvas id="chartTopOrders" height="280"></canvas></div>
+            <div class="card-header bg-white fw-bold py-2 small">أعلى 10 مهندسين بعدد الطلبات</div>
+            <div class="card-body p-2"><canvas id="chartTopOrders" height="240"></canvas></div>
         </div>
     </div>
 </div>
 <div class="row g-3">
     <div class="col-lg-6">
         <div class="card shadow-sm h-100">
-            <div class="card-header bg-white fw-bold">أكثر الخامات طلباً</div>
-            <div class="card-body"><canvas id="chartMaterials" height="280"></canvas></div>
+            <div class="card-header bg-white fw-bold py-2 small">أكثر الخامات طلباً</div>
+            <div class="card-body p-2"><canvas id="chartMaterials" height="240"></canvas></div>
         </div>
     </div>
     <div class="col-lg-6">
         <div class="card shadow-sm h-100">
-            <div class="card-header bg-white fw-bold">النشاط الشهري (آخر 6 أشهر)</div>
-            <div class="card-body"><canvas id="chartMonthly" height="280"></canvas></div>
+            <div class="card-header bg-white fw-bold py-2 small">النشاط الشهري (آخر 6 أشهر)</div>
+            <div class="card-body p-2"><canvas id="chartMonthly" height="240"></canvas></div>
         </div>
     </div>
 </div>
@@ -296,6 +419,15 @@
 {% block dept_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
+function toggleExtra(key, btn) {
+    const rows = document.querySelectorAll('.extra-row-' + key);
+    const hidden = rows[0] && rows[0].classList.contains('d-none');
+    rows.forEach(r => r.classList.toggle('d-none', !hidden));
+    btn.innerHTML = hidden
+        ? '<i class="fas fa-chevron-up me-1"></i>إخفاء'
+        : '<i class="fas fa-chevron-down me-1"></i>عرض ' + rows.length + ' إضافي';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const COLORS = ['#1a237e','#2e7d32','#f57c00','#0288d1','#c62828','#6a1b9a','#00838f','#558b2f','#e65100','#ad1457'];
 
@@ -306,98 +438,41 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(err => console.warn('Chart load error:', err));
     }
 
-    // Top by Revenue (horizontal bar)
     loadChart("{% url 'external_sales:chart_top_revenue' %}", 'chartTopRevenue', function(data, ctx) {
         new Chart(ctx, {
             type: 'bar',
-            data: {
-                labels: data.labels || [],
-                datasets: [{
-                    label: 'الإيرادات (ر.س)',
-                    data: data.values || [],
-                    backgroundColor: COLORS
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { x: { beginAtZero: true } }
-            }
+            data: { labels: data.labels || [], datasets: [{ label: 'الإيرادات ({{ currency_symbol }})', data: data.values || [], backgroundColor: COLORS }] },
+            options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
         });
     });
 
-    // Top by Orders (bar)
     loadChart("{% url 'external_sales:chart_top_orders' %}", 'chartTopOrders', function(data, ctx) {
         new Chart(ctx, {
             type: 'bar',
-            data: {
-                labels: data.labels || [],
-                datasets: [{
-                    label: 'عدد الطلبات',
-                    data: data.values || [],
-                    backgroundColor: '#1a237e'
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-            }
+            data: { labels: data.labels || [], datasets: [{ label: 'عدد الطلبات', data: data.values || [], backgroundColor: '#1a237e' }] },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
         });
     });
 
-    // Top Materials (horizontal bar)
     loadChart("{% url 'external_sales:chart_materials' %}", 'chartMaterials', function(data, ctx) {
         new Chart(ctx, {
             type: 'bar',
-            data: {
-                labels: data.labels || [],
-                datasets: [{
-                    label: 'عدد الطلبات',
-                    data: data.values || [],
-                    backgroundColor: COLORS
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
-            }
+            data: { labels: data.labels || [], datasets: [{ label: 'عدد الطلبات', data: data.values || [], backgroundColor: COLORS }] },
+            options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
         });
     });
 
-    // Monthly Activity (line - dual dataset)
     loadChart("{% url 'external_sales:chart_monthly_activity' %}", 'chartMonthly', function(data, ctx) {
         new Chart(ctx, {
             type: 'line',
             data: {
                 labels: data.months || [],
                 datasets: [
-                    {
-                        label: 'التواصل',
-                        data: data.contacts || [],
-                        borderColor: '#2e7d32',
-                        backgroundColor: 'rgba(46,125,50,.1)',
-                        fill: true, tension: .3
-                    },
-                    {
-                        label: 'الطلبات المرتبطة',
-                        data: data.orders || [],
-                        borderColor: '#1a237e',
-                        backgroundColor: 'rgba(26,35,126,.1)',
-                        fill: true, tension: .3
-                    }
+                    { label: 'التواصل', data: data.contacts || [], borderColor: '#2e7d32', backgroundColor: 'rgba(46,125,50,.1)', fill: true, tension: .3 },
+                    { label: 'الطلبات المرتبطة', data: data.orders || [], borderColor: '#1a237e', backgroundColor: 'rgba(26,35,126,.1)', fill: true, tension: .3 }
                 ]
             },
-            options: {
-                responsive: true,
-                scales: {
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
-                    x: { grid: { display: false } }
-                }
-            }
+            options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { grid: { display: false } } } }
         });
     });
 });

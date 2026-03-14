@@ -44,8 +44,8 @@
                             <input type="text" name="company_office_name" id="id_company_office_name" class="form-control" value="{{ form.company_office_name.value|default:'' }}">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="id_city" class="form-label">المدينة</label>
-                            <input type="text" name="city" id="id_city" class="form-control" value="{{ form.city.value|default:'' }}">
+                            <label for="id_city" class="form-label">المحافظة</label>
+                            {{ form.city }}
                         </div>
                     </div>
 
