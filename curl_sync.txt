@@ -1,0 +1,14 @@
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+  0      0   0      0   0      0      0      0                              0  0  51132   0      0   0      0      0      0                              0  0  51132   0      0   0      0      0      0                              0  0  51132   0      0   0      0      0      0                              0
+HTTP/1.1 200 OK
+Date: Mon, 26 Jan 2026 15:58:15 GMT
+Server: WSGIServer/0.2 CPython/3.13.11
+Content-Type: text/html; charset=utf-8
+X-Frame-Options: DENY
+Vary: Cookie, Accept-Encoding
+Content-Length: 51132
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Set-Cookie: elkhawaga_csrftoken=F6PCOPunzAXfZ86ldF0BpRdysbSmAqjB; expires=Mon, 25 Jan 2027 15:58:15 GMT; Max-Age=31449600; Path=/; SameSite=Lax
+

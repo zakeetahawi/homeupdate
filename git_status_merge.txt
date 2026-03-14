@@ -1,0 +1,74 @@
+On branch feature/complete-refactoring-and-testing-2026-01-22
+Your branch is up to date with 'origin/feature/complete-refactoring-and-testing-2026-01-22'.
+
+All conflicts fixed but you are still merging.
+  (use "git commit" to conclude merge)
+
+Changes to be committed:
+	modified:   accounts/admin.py
+	modified:   accounts/forms.py
+	deleted:    accounts/management/commands/setup_dashboard_years.py
+	new file:   accounts/migrations/0051_user_can_edit_price.py
+	new file:   accounts/migrations/0052_delete_dashboardyearsettings.py
+	modified:   accounts/models.py
+	modified:   accounts/utils.py
+	new file:   board_dashboard/__init__.py
+	new file:   board_dashboard/admin.py
+	new file:   board_dashboard/api_views.py
+	new file:   board_dashboard/apps.py
+	new file:   board_dashboard/migrations/0001_initial.py
+	new file:   board_dashboard/migrations/__init__.py
+	new file:   board_dashboard/mixins.py
+	new file:   board_dashboard/mixins_api.py
+	new file:   board_dashboard/models.py
+	new file:   board_dashboard/permissions.py
+	new file:   board_dashboard/templates/board_dashboard/dashboard.html
+	new file:   board_dashboard/tests.py
+	new file:   board_dashboard/urls.py
+	new file:   board_dashboard/views.py
+	new file:   cloudflare-worker/src/error-handler.js
+	new file:   cloudflare-worker/wrangler-error.toml
+	modified:   cloudflare-worker/wrangler.toml
+	modified:   crm/admin.py
+	deleted:    crm/dashboard_utils.py
+	modified:   crm/settings.py
+	modified:   crm/urls.py
+	modified:   crm/views.py
+	deleted:    debug_wizard.py
+	new file:   docs/CLOUDFLARE_ERROR_HANDLER_DEPLOYMENT.md
+	modified:   factory_accounting/models.py
+	modified:   factory_accounting/reports_views.py
+	modified:   factory_accounting/templates/factory_accounting/reports.html
+	new file:   factory_accounting/templates/factory_accounting/reports.html.bak
+	modified:   factory_accounting/views.py
+	modified:   inspections/urls.py
+	modified:   installations/views.py
+	modified:   manufacturing/admin.py
+	modified:   manufacturing/dashboard_view.py
+	new file:   manufacturing/services/dashboard.py
+	modified:   manufacturing/urls.py
+	modified:   manufacturing/views.py
+	new file:   orders/migrations/0091_draftorderitem_is_manual_price_and_more.py
+	modified:   orders/models.py
+	modified:   orders/permissions.py
+	new file:   orders/services/dashboard.py
+	modified:   orders/templates/orders/order_detail.html
+	modified:   orders/templates/orders/wizard/step3_order_items.html
+	modified:   orders/views.py
+	modified:   orders/wizard_models.py
+	modified:   orders/wizard_views.py
+	new file:   scripts/repair_production_logs.py
+	deleted:    static/css/admin-dashboard.css
+	new file:   static/css/dashboard/core.css
+	deleted:    static/js/admin-dashboard.js
+	new file:   static/js/dashboard/core.js
+	deleted:    templates/admin_dashboard.html
+	modified:   templates/base.html
+	new file:   templates/dashboard/base_dashboard.html
+	new file:   templates/dashboard/home.html
+	modified:   templates/includes/navbar_dynamic.html
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	git_status_merge.txt
+

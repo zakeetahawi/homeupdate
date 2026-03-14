@@ -1,264 +1,49 @@
-import json
-import logging
-import re
+
 import time
-import traceback
-
+import logging
 from django.conf import settings
-from django.contrib.auth.middleware import get_user
 from django.db import connection
-from django.http import HttpResponse, HttpResponseGone
-from django.middleware.gzip import GZipMiddleware
 from django.utils.deprecation import MiddlewareMixin
-from django.utils.functional import SimpleLazyObject
-from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.tokens import AccessToken
 
-# إعداد السجل الخاص بالاستعلامات البطيئة
-slow_queries_logger = logging.getLogger("slow_queries")
-query_logger = logging.getLogger("django.db.backends")
-websocket_logger = logging.getLogger("websocket_blocker")
+logger = logging.getLogger("performance")
+slow_queries_logger = logging.getLogger("websocket_blocker")
 
-
-class BlockWebSocketMiddleware(MiddlewareMixin):
-    """
-    Middleware لحظر جميع طلبات WebSocket والدردشة
-    """
-
-    def process_request(self, request):
-        """
-        فحص الطلبات وحظر طلبات WebSocket
-        """
-        path = request.path.lower()
-
-        # قائمة المسارات المحظورة
-        blocked_paths = [
-            "/ws/",
-            "/websocket/",
-            "/chat/",
-            "/socket.io/",
-            "/ws/chat/",
-            "/chat/general/",
-            "/ws/chat/general/",
-        ]
-
-        # فحص إذا كان المسار محظور
-        for blocked_path in blocked_paths:
-            if blocked_path in path:
-                # تسجيل معلومات الطلب
-                user_agent = request.META.get("HTTP_USER_AGENT", "Unknown")
-                referer = request.META.get("HTTP_REFERER", "No referer")
-                remote_addr = request.META.get("REMOTE_ADDR", "Unknown IP")
-
-                websocket_logger.warning(
-                    f"🚫 Blocked WebSocket request: {path} - "
-                    f"IP: {remote_addr}, "
-                    f"User-Agent: {user_agent[:50]}..., "
-                    f"Referer: {referer}"
-                )
-
-                # إرجاع 410 Gone مع headers قوية
-                response = HttpResponseGone(
-                    "WebSocket and chat services have been permanently removed. "
-                    "Please clear your browser cache and disable any chat-related extensions."
-                )
-                response["Cache-Control"] = (
-                    "no-cache, no-store, must-revalidate, max-age=0"
-                )
-                response["Pragma"] = "no-cache"
-                response["Expires"] = "0"
-                response["Retry-After"] = "86400"  # 24 ساعة
-                response["X-Chat-Status"] = "PERMANENTLY_REMOVED"
-                response["X-WebSocket-Status"] = "DISABLED"
-                response["Connection"] = "close"
-
-                return response
-
-        # فحص headers للطلبات WebSocket
-        upgrade_header = request.META.get("HTTP_UPGRADE", "").lower()
-        connection_header = request.META.get("HTTP_CONNECTION", "").lower()
-
-        if upgrade_header == "websocket" or "upgrade" in connection_header:
-            websocket_logger.warning(
-                f"🚫 Blocked WebSocket upgrade request: {path} - "
-                f"Upgrade: {upgrade_header}, Connection: {connection_header}"
-            )
-
-            response = HttpResponseGone("WebSocket connections are not supported")
-            response["Cache-Control"] = "no-cache, no-store, must-revalidate"
-            response["Connection"] = "close"
-            return response
-
-        return None
-
-
-class QueryAnalysisMiddleware(MiddlewareMixin):
-    """Middleware لتحليل وتسجيل الاستعلامات البطيئة"""
-
-    def process_request(self, request):
-        """بداية تتبع الاستعلامات"""
-        self.start_time = time.time()
-        self.start_queries = len(connection.queries)
-        return None
+class QueryPerformanceLoggingMiddleware(MiddlewareMixin):
+    def process_view(self, request, view_func, view_args, view_kwargs):
+        request._start_time = time.time()
+        # تفعيل queries logging فقط في DEBUG
+        if settings.DEBUG:
+            from django.db import reset_queries
+            # تفعيل queries logging فقط في التطوير
+            connection.force_debug_cursor = True
+            reset_queries()
+            request._queries_before = len(connection.queries)
 
     def process_response(self, request, response):
-        """تحليل الاستعلامات في نهاية الطلب"""
-        if not settings.DEBUG:
-            return response
+        # حساب الوقت المستغرق
+        start_time = getattr(request, "_start_time", time.time())
+        total_time = (time.time() - start_time) * 1000
 
-        total_time = time.time() - self.start_time
-        total_queries = len(connection.queries) - self.start_queries
-
-        # تسجيل المعلومات الأساسية
-        if total_time > getattr(settings, "SLOW_REQUEST_THRESHOLD", 1.0):
-            query_logger.warning(
-                f"بطء في الطلب: {request.path} - "
-                f"الوقت: {total_time:.3f}s، "
-                f"الاستعلامات: {total_queries}"
+        # تسجيل الصفحات البطيئة (أكثر من ثانية)
+        if total_time > 1000:
+            logger.warning(
+                f"SLOW_PAGE: {request.path} | {int(total_time)}ms | user={getattr(request, 'user', None)}"
             )
 
-        # تحليل الاستعلامات البطيئة
-        slow_queries = []
-        for query in connection.queries[-total_queries:]:
-            query_time = float(query["time"])
-            if query_time > getattr(settings, "SLOW_QUERY_THRESHOLD", 0.1):
-                slow_queries.append(
-                    {
-                        "sql": (
-                            query["sql"][:200] + "..."
-                            if len(query["sql"]) > 200
-                            else query["sql"]
-                        ),
-                        "time": query_time,
-                    }
-                )
-
-        if slow_queries:
-            query_logger.warning(
-                f"استعلامات بطيئة في {request.path}:\n"
-                + "\n".join([f"  - {q['time']:.3f}s: {q['sql']}" for q in slow_queries])
-            )
-
-        # إضافة headers للمطورين
-        if settings.DEBUG:
-            response["X-DB-Queries"] = str(total_queries)
-            response["X-DB-Time"] = f"{total_time:.3f}s"
-            response["X-Slow-Queries"] = str(len(slow_queries))
-
-        return response
-
-
-class DebugMiddleware:
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        # Process the request
-        response = self.get_response(request)
-        return response
-
-    def process_exception(self, request, exception):
-        if settings.DEBUG:
-            # Print the exception details
-            print("\n\n=== EXCEPTION DETAILS ===")
-            print(f"Exception Type: {type(exception).__name__}")
-            print(f"Exception Message: {str(exception)}")
-            print(f"Request Path: {request.path}")
-            print(f"Request Method: {request.method}")
-
-            # Print request data
-            print("\n=== REQUEST DATA ===")
-            print(f"GET Parameters: {request.GET}")
-
-            if request.method == "POST":
-                print("\n=== POST DATA ===")
-                for key, value in request.POST.items():
-                    # Limit the output length for large values
-                    if isinstance(value, str) and len(value) > 1000:
-                        print(f"{key}: {value[:1000]}... (truncated)")
-                    else:
-                        print(f"{key}: {value}")
-
-            # Print traceback
-            print("\n=== TRACEBACK ===")
-            traceback.print_exc()
-            print("=====================\n\n")
-
-            # Return a detailed error response in development
-            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return HttpResponse(
-                    json.dumps(
-                        {
-                            "error": str(exception),
-                            "type": type(exception).__name__,
-                            "traceback": traceback.format_exc(),
-                        }
-                    ),
-                    content_type="application/json",
-                    status=500,
-                )
-
-        # Let Django handle the exception
-        return None
-
-
-class QueryPerformanceMiddleware:
-    """
-    وسيط لمراقبة أداء استعلامات قاعدة البيانات وتسجيل الاستعلامات البطيئة
-    """
-
-    def __init__(self, get_response):
-        self.get_response = get_response
-        # حد العتبة للاستعلامات البطيئة بالثواني (50 مللي ثانية = 0.05 ثانية)
-        self.slow_query_threshold = getattr(settings, "SLOW_QUERY_THRESHOLD", 0.05)
-
-    def __call__(self, request):
-        # تنفيذ أي كود قبل معالجة الطلب
-
-        # قياس وقت تنفيذ الطلب
-        start_time = time.time()
-        start_queries = len(connection.queries)
-
-        # معالجة الطلب
-        response = self.get_response(request)
-
-        # قياس الوقت بعد انتهاء الطلب
-        duration = time.time() - start_time
-        end_queries = len(connection.queries)
-
-        # تسجيل الاستعلامات البطيئة إذا كان التصحيح مفعَّلاً
-        if settings.DEBUG:
-            queries_executed = end_queries - start_queries
-            if queries_executed > 0:
-                slow_queries = []
-                for query in connection.queries[start_queries:end_queries]:
-                    query_time = float(query.get("time", 0))
-                    if query_time > self.slow_query_threshold:
-                        slow_queries.append(
-                            {
-                                "sql": query.get("sql"),
-                                "time": query_time,
-                            }
+        # تسجيل الاستعلامات البطيئة فقط في DEBUG
+        if settings.DEBUG and hasattr(request, '_queries_before'):
+            queries_count = len(connection.queries) - request._queries_before
+            
+            # تسجيل الاستعلامات البطيئة (أكثر من 100ms)
+            if hasattr(connection, "queries") and connection.queries:
+                for query in connection.queries[request._queries_before:]:
+                    if "time" in query and float(query["time"]) > 0.1:  # 100ms
+                        slow_queries_logger.warning(
+                            f"SLOW_QUERY: {query['time']}s | {query['sql'][:200]}..."
                         )
-
-                if slow_queries:
-                    # Using ASCII-only text for log messages to avoid encoding issues
-                    slow_queries_logger.warning(
-                        f"Found {len(slow_queries)} slow queries in request {request.path}:\n"
-                        + "\n".join(
-                            [
-                                f"Time: {q['time']:.4f}s: {q['sql']}"
-                                for q in slow_queries
-                            ]
-                        )
-                    )
-
-            # تسجيل إجمالي الاستعلامات والوقت المستغرق
-            if queries_executed > 10:
-                # Using ASCII-only text for log messages
-                slow_queries_logger.info(
-                    f"Executed {queries_executed} queries in request {request.path} in {duration:.4f} seconds"
-                )
+            
+            # إعادة ضبط force_debug_cursor
+            connection.force_debug_cursor = False
 
         return response
 

@@ -1,10 +1,11 @@
 from decimal import Decimal
+from typing import Dict, List, Any, Tuple
 
 from manufacturing.models import ManufacturingOrderItem
 from orders.contract_models import ContractCurtain
 
 
-def get_material_summary_context(order):
+def get_material_summary_context(order: Any) -> Dict[str, Any]:
     """
     Generate material summary context for a given order.
     Returns the summary list and grand totals.
@@ -34,6 +35,24 @@ def get_material_summary_context(order):
         default_rate = 1.0
 
     materials_map = {}
+
+    # ✅ إصلاح N+1: جلب الإعدادات مرة واحدة قبل الحلقة
+    from factory_accounting.models import FactoryAccountingSettings
+
+    try:
+        settings = FactoryAccountingSettings.objects.first()
+        if settings:
+            double_types = list(
+                settings.double_meter_tailoring_types.values_list("value", flat=True)
+            ) + list(
+                settings.double_meter_tailoring_types.values_list(
+                    "display_name", flat=True
+                )
+            )
+        else:
+            double_types = []
+    except Exception:
+        double_types = []
 
     # 1. Fabrics Logic
     curtains = (

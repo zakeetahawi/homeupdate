@@ -1,0 +1,147 @@
+name: Django ERP CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-django pytest-cov black isort flake8 mypy
+    
+    - name: Run Black (Code Formatting Check)
+      run: black --check .
+    
+    - name: Run isort (Import Sorting Check)
+      run: isort --check-only .
+    
+    - name: Run flake8 (Style Check)
+      run: flake8 . --max-line-length=88 --extend-ignore=E203,W503
+    
+    - name: Run mypy (Type Checking)
+      run: mypy inventory/ core/ manufacturing/ orders/ --ignore-missing-imports
+      continue-on-error: true
+    
+    - name: Run Tests with Coverage
+      env:
+        DB_NAME: test_db
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_HOST: localhost
+        DB_PORT: 5432
+        SECRET_KEY: test-secret-key-for-ci
+        DEBUG: True
+      run: |
+        pytest tests/ -v --cov=. --cov-report=xml --cov-report=html --cov-report=term
+    
+    - name: Upload Coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+    
+    - name: Check Test Coverage
+      run: |
+        coverage report --fail-under=60
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+    
+    - name: Install linting tools
+      run: |
+        pip install black isort flake8 mypy
+    
+    - name: Check code formatting
+      run: |
+        black --check .
+        isort --check-only .
+    
+    - name: Run flake8
+      run: flake8 . --max-line-length=88 --extend-ignore=E203,W503
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+    
+    - name: Install security tools
+      run: |
+        pip install bandit safety
+    
+    - name: Run Bandit (Security Linter)
+      run: bandit -r . -x ./venv,./tests
+      continue-on-error: true
+    
+    - name: Check Dependencies for Vulnerabilities
+      run: safety check --json
+      continue-on-error: true
+
+  deploy:
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to Production
+      run: |
+        echo "Deployment steps would go here"
+        # Add your deployment commands
+        # e.g., ssh to server, pull changes, restart services
