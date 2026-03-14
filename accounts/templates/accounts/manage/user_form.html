@@ -251,6 +251,48 @@
                     </div>
                 </div>
 
+                <!-- صلاحيات Django الفردية -->
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-user-shield me-2 text-purple"></i>صلاحيات Django الفردية</h6>
+                        <span class="badge bg-success" id="direct-perms-count">{{ user_direct_perm_ids|length }}</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="small text-muted mb-2">
+                            <i class="fas fa-info-circle me-1"></i>
+                            اختر صلاحيات Django مباشرة للمستخدم (مستقلة عن الأدوار). استخدم البحث للتصفية.
+                        </p>
+                        <div class="mb-3">
+                            <input type="text" id="perm-search-input" class="form-control form-control-sm"
+                                   placeholder="🔍 ابحث عن صلاحية..." autocomplete="off">
+                        </div>
+                        <div style="max-height:400px; overflow-y:auto;" id="django-perms-container">
+                            {% for app_key, app_data in django_permissions_grouped.items %}
+                            <div class="perm-app-group mb-2" data-app="{{ app_key }}">
+                                <div class="d-flex align-items-center gap-2 perm-app-header rounded px-2 py-1" style="cursor:pointer;user-select:none" data-app="{{ app_key }}">
+                                    <i class="fas fa-chevron-left perm-app-chevron" style="font-size:10px;transition:transform .2s"></i>
+                                    <span class="fw-bold small flex-grow-1">{{ app_data.label }}</span>
+                                    <span class="badge bg-light text-dark" style="font-size:10px">{{ app_data.permissions|length }}</span>
+                                </div>
+                                <div class="perm-app-body pe-3" style="display:none;border-right:2px solid #e9ecef;margin-right:8px">
+                                    {% for p in app_data.permissions %}
+                                    <label class="form-check d-flex align-items-center gap-2 mb-1 perm-item" data-codename="{{ p.codename }}" data-name="{{ p.name }}" data-full="{{ p.full }}">
+                                        <input type="checkbox" name="user_permissions" value="{{ p.id }}"
+                                               class="form-check-input form-check-input-sm django-perm-cb"
+                                               {% if p.id in user_direct_perm_ids %}checked{% endif %}>
+                                        <div>
+                                            <code class="small" style="font-size:11px">{{ p.codename }}</code>
+                                            <br><small class="text-muted" style="font-size:10px">{{ p.name }}</small>
+                                        </div>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
                 <div class="d-flex gap-2 mb-3">
                     <button type="submit" class="btn btn-primary px-4"><i class="fas fa-save me-1"></i>حفظ كل التعديلات</button>
                     <a href="{% url 'accounts:user_manage_list' %}" class="btn btn-outline-secondary">إلغاء</a>

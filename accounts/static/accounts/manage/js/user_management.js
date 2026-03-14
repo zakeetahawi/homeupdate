@@ -311,4 +311,106 @@ function initUserManagement(config) {
         div.textContent = str;
         return div.innerHTML;
     }
+
+    // ─── Django permissions accordion (event delegation) ───
+    const permsContainer = document.getElementById('django-perms-container');
+    if (permsContainer) {
+        permsContainer.addEventListener('click', function(e) {
+            const header = e.target.closest('.perm-app-header');
+            if (!header) return;
+            // Don't toggle if clicking a checkbox
+            if (e.target.closest('input')) return;
+            const group = header.closest('.perm-app-group');
+            const body = group ? group.querySelector('.perm-app-body') : null;
+            const chevron = header.querySelector('.perm-app-chevron');
+            if (!body) return;
+            const isHidden = body.style.display === 'none';
+            body.style.display = isHidden ? '' : 'none';
+            if (chevron) chevron.style.transform = isHidden ? 'rotate(-90deg)' : '';
+        });
+    }
+
+    // Auto-expand groups that have checked permissions
+    document.querySelectorAll('.perm-app-group').forEach(group => {
+        const hasChecked = group.querySelector('.django-perm-cb:checked');
+        if (hasChecked) {
+            const body = group.querySelector('.perm-app-body');
+            const chevron = group.querySelector('.perm-app-chevron');
+            if (body) body.style.display = '';
+            if (chevron) chevron.style.transform = 'rotate(-90deg)';
+        }
+    });
+
+    // ─── Django permissions search filter ───
+    const permSearchInput = document.getElementById('perm-search-input');
+    if (permSearchInput) {
+        permSearchInput.addEventListener('input', function() {
+            const query = this.value.trim().toLowerCase();
+            document.querySelectorAll('.perm-app-group').forEach(group => {
+                const items = group.querySelectorAll('.perm-item');
+                let groupHasMatch = false;
+                items.forEach(item => {
+                    const codename = (item.dataset.codename || '').toLowerCase();
+                    const name = (item.dataset.name || '').toLowerCase();
+                    const full = (item.dataset.full || '').toLowerCase();
+                    const match = !query || codename.includes(query) || name.includes(query) || full.includes(query);
+                    item.style.display = match ? '' : 'none';
+                    if (match) groupHasMatch = true;
+                });
+                group.style.display = groupHasMatch ? '' : 'none';
+                // Auto-expand when searching
+                if (query && groupHasMatch) {
+                    const body = group.querySelector('.perm-app-body');
+                    const chevron = group.querySelector('.perm-app-chevron');
+                    if (body) body.style.display = '';
+                    if (chevron) chevron.style.transform = 'rotate(-90deg)';
+                }
+            });
+        });
+    }
+
+    // ─── Direct perms count + sidebar live update ───
+    document.querySelectorAll('.django-perm-cb').forEach(cb => {
+        cb.addEventListener('change', function() {
+            const countEl = document.getElementById('direct-perms-count');
+            if (countEl) {
+                countEl.textContent = document.querySelectorAll('.django-perm-cb:checked').length;
+            }
+
+            const permItem = this.closest('.perm-item');
+            const fullPerm = permItem ? permItem.dataset.full : '';
+            const tbody = document.getElementById('perms-table-body');
+            const permsCount = document.getElementById('perms-count');
+            if (!tbody || !fullPerm) return;
+
+            // Remove "no perms" placeholder if exists
+            const noPermsRow = document.getElementById('no-perms-row');
+            if (noPermsRow) noPermsRow.remove();
+
+            if (this.checked) {
+                // Add to sidebar
+                const tr = document.createElement('tr');
+                tr.dataset.directPerm = fullPerm;
+                tr.innerHTML = `<td class="px-3 py-1">
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="fas fa-check-circle text-success mt-1" style="font-size:11px"></i>
+                        <div>
+                            <code class="perm-code">${escapeHtml(fullPerm)}</code>
+                            <br><small class="text-success">صلاحية فردية</small>
+                        </div>
+                    </div>
+                </td>`;
+                tbody.appendChild(tr);
+            } else {
+                // Remove from sidebar
+                const existing = tbody.querySelector(`tr[data-direct-perm="${CSS.escape(fullPerm)}"]`);
+                if (existing) existing.remove();
+            }
+
+            // Update total permissions count
+            if (permsCount) {
+                permsCount.textContent = tbody.querySelectorAll('tr').length;
+            }
+        });
+    });
 }

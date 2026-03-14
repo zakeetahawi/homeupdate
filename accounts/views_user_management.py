@@ -17,6 +17,9 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
+
 from accounts.models import ROLE_HIERARCHY, Branch, Role, User, UserRole
 
 logger = logging.getLogger(__name__)
@@ -152,6 +155,10 @@ def user_manage_edit(request, pk):
     department_sections = _build_department_sections(user_obj)
     user_department_ids = set(user_obj.departments.values_list("id", flat=True))
 
+    # صلاحيات Django الفردية — مجمّعة حسب التطبيق
+    django_permissions_grouped = _build_django_permissions_grouped()
+    user_direct_perm_ids = set(user_obj.user_permissions.values_list("id", flat=True))
+
     context = {
         "user_obj": user_obj,
         "role_sections": role_sections,
@@ -164,6 +171,8 @@ def user_manage_edit(request, pk):
         "role_hierarchy": ROLE_HIERARCHY,
         "department_sections": department_sections,
         "user_department_ids": user_department_ids,
+        "django_permissions_grouped": django_permissions_grouped,
+        "user_direct_perm_ids": user_direct_perm_ids,
     }
     return render(request, "accounts/manage/user_form.html", context)
 
@@ -220,6 +229,13 @@ def _handle_user_edit_post(request, user_obj):
     # Departments M2M
     dept_ids = request.POST.getlist("departments")
     user_obj.departments.set(dept_ids)
+
+    # صلاحيات Django الفردية (user_permissions M2M)
+    perm_ids = request.POST.getlist("user_permissions")
+    valid_perm_ids = list(
+        Permission.objects.filter(id__in=perm_ids).values_list("id", flat=True)
+    )
+    user_obj.user_permissions.set(valid_perm_ids)
 
     # مسح كاش الناف بار لهذا المستخدم
     for suffix in [f"{user_obj.is_staff}_{user_obj.is_superuser}", "True_True", "True_False", "False_False"]:
@@ -420,6 +436,15 @@ def _get_permissions_with_source(user_obj):
                     }
                 )
 
+    # صلاحيات Django الفردية (user_permissions)
+    for perm in user_obj.user_permissions.select_related("content_type").all():
+        full_perm = f"{perm.content_type.app_label}.{perm.codename}"
+        if full_perm not in seen:
+            seen.add(full_perm)
+            result.append(
+                {"permission": full_perm, "source": "صلاحية فردية", "type": "direct"}
+            )
+
     return result
 
 
@@ -467,3 +492,55 @@ def _build_department_sections(user_obj):
             "root_assigned": root_assigned,
         })
     return sections
+
+
+# ─── App label Arabic map ─────────────────────────────────────
+_APP_LABELS_AR = {
+    "accounts": "الحسابات",
+    "customers": "العملاء",
+    "orders": "الطلبات",
+    "inventory": "المخزون",
+    "inspections": "المعاينات",
+    "installations": "التركيبات",
+    "manufacturing": "التصنيع",
+    "complaints": "الشكاوى",
+    "reports": "التقارير",
+    "accounting": "المحاسبة",
+    "cutting": "القص",
+    "external_sales": "المبيعات الخارجية",
+    "factory_accounting": "محاسبة المصنع",
+    "installation_accounting": "محاسبة التركيبات",
+    "notifications": "الإشعارات",
+    "whatsapp": "واتساب",
+    "board_dashboard": "لوحة المؤشرات",
+    "core": "النظام الأساسي",
+    "auth": "المصادقة",
+    "contenttypes": "أنواع المحتوى",
+    "sessions": "الجلسات",
+    "admin": "الإدارة",
+}
+
+
+def _build_django_permissions_grouped():
+    """بناء قائمة صلاحيات Django مجمّعة حسب التطبيق"""
+    permissions = (
+        Permission.objects.select_related("content_type")
+        .order_by("content_type__app_label", "codename")
+    )
+
+    grouped = {}
+    for perm in permissions:
+        app = perm.content_type.app_label
+        if app not in grouped:
+            grouped[app] = {
+                "label": _APP_LABELS_AR.get(app, app),
+                "permissions": [],
+            }
+        grouped[app]["permissions"].append({
+            "id": perm.id,
+            "codename": perm.codename,
+            "name": perm.name,
+            "full": f"{app}.{perm.codename}",
+        })
+
+    return dict(sorted(grouped.items(), key=lambda x: x[1]["label"]))

@@ -126,3 +126,7 @@
 
 /* ─── Toast ─── */
 #toast-container .toast { min-width:280px; }
+
+/* ─── Django permissions accordion ─── */
+.perm-app-header:hover { background:#f8f9fa; }
+.perm-app-header { transition: background .15s; }

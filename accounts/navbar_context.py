@@ -19,8 +19,8 @@ _HIDDEN_NAVBAR_URLS = {
 # خريطة مسارات URL → الأدوار المطلوبة (أحد المذكورين يكفي)
 # إذا لم يكن المسار هنا أو المستخدم staff/superuser: يُمرَّر بدون قيد
 _URL_ROLE_MAP = {
-    "/customers/": ["is_salesperson", "is_branch_manager", "is_region_manager", "is_sales_manager"],
-    "/orders/": ["is_salesperson", "is_branch_manager", "is_region_manager", "is_sales_manager"],
+    "/customers/": ["is_salesperson", "is_branch_manager", "is_region_manager", "is_sales_manager", "is_external_sales_director", "is_decorator_dept_manager", "is_decorator_dept_staff"],
+    "/orders/": ["is_salesperson", "is_branch_manager", "is_region_manager", "is_sales_manager", "is_external_sales_director", "is_decorator_dept_manager", "is_decorator_dept_staff"],
     "/inventory/": ["is_warehouse_staff", "is_sales_manager", "is_branch_manager"],
     "/inspections/": ["is_inspection_technician", "is_inspection_manager"],
     "/installations/": ["is_installation_manager", "is_traffic_manager"],
