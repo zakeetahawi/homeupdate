@@ -120,26 +120,6 @@ class Migration(migrations.Migration):
                 verbose_name="حذف بواسطة",
             ),
         ),
-        migrations.AddField(
-            model_name="manufacturingorder",
-            name="is_deleted",
-            field=models.BooleanField(db_index=True, default=False, verbose_name="محذوف"),
-        ),
-        migrations.AddField(
-            model_name="manufacturingorder",
-            name="deleted_at",
-            field=models.DateTimeField(blank=True, null=True, verbose_name="تاريخ الحذف"),
-        ),
-        migrations.AddField(
-            model_name="manufacturingorder",
-            name="deleted_by",
-            field=models.ForeignKey(
-                blank=True,
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                related_name="installations_manufacturingorder_deleted",
-                to=settings.AUTH_USER_MODEL,
-                verbose_name="حذف بواسطة",
-            ),
-        ),
+        # manufacturingorder operations removed - already applied via 0016/0017,
+        # and model was renamed to modificationmanufacturingorder in 0025
     ]

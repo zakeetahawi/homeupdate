@@ -49,18 +49,7 @@ class Migration(migrations.Migration):
                 verbose_name="حذف بواسطة",
             ),
         ),
-        migrations.AlterField(
-            model_name="manufacturingorder",
-            name="deleted_by",
-            field=models.ForeignKey(
-                blank=True,
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                related_name="%(app_label)s_%(class)s_deleted",
-                to=settings.AUTH_USER_MODEL,
-                verbose_name="حذف بواسطة",
-            ),
-        ),
+        # manufacturingorder AlterField removed - model renamed in 0025
         migrations.AlterField(
             model_name="modificationrequest",
             name="deleted_by",
