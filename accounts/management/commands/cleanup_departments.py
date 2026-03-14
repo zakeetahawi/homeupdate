@@ -30,7 +30,6 @@ class Command(BaseCommand):
             "inventory",  # المخزون
             "inspections",  # المعاينات
             "installations",  # التركيبات
-            "factory",  # المصنع
             "reports",  # التقارير
             "data_management",  # إدارة البيانات
         ]

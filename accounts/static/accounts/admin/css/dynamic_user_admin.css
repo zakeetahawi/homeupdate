@@ -1,0 +1,181 @@
+/**
+ * تنسيقات الأقسام الديناميكية - نموذج المستخدم
+ * Dynamic Department Chooser Styles
+ */
+
+/* ─── واجهة اختيار القسم ─────────────────────────────────── */
+
+#dept-chooser-fieldset {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    margin: 15px 0;
+    padding: 0;
+}
+
+#dept-chooser-fieldset h2 {
+    background: linear-gradient(135deg, #417690 0%, #2d5a6e 100%);
+    color: #fff;
+    padding: 10px 15px;
+    margin: 0;
+    font-size: 14px;
+    border-radius: 6px 6px 0 0;
+}
+
+#dept-chooser-fieldset .description {
+    padding: 8px 15px 4px;
+    color: #666;
+    font-size: 12px;
+    margin: 0;
+}
+
+.dept-chooser-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 15px 15px;
+}
+
+/* ─── شرائح الأقسام (Chips) ──────────────────────────────── */
+
+.dept-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 2px solid #ced4da;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    background: #fff;
+    font-size: 13px;
+    user-select: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.dept-chip:hover {
+    border-color: #417690;
+    background: #f0f6fa;
+    box-shadow: 0 2px 8px rgba(65,118,144,0.15);
+    transform: translateY(-1px);
+}
+
+.dept-chip.active {
+    background: linear-gradient(135deg, #417690, #2d5a6e);
+    color: #fff;
+    border-color: #2d5a6e;
+    box-shadow: 0 2px 10px rgba(65,118,144,0.3);
+}
+
+.dept-chip input[type="checkbox"] {
+    display: none;
+}
+
+.dept-icon {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.dept-label {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ─── شريط ملخص الأدوار ──────────────────────────────────── */
+
+.role-summary-bar {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin: 0 0 15px;
+    padding: 10px 15px;
+    min-height: 40px;
+}
+
+.summary-empty {
+    color: #999;
+    font-style: italic;
+    font-size: 12px;
+    text-align: center;
+    padding: 4px;
+}
+
+.summary-roles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #e3f2fd;
+    color: #1565c0;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid #bbdefb;
+}
+
+.badge-icon {
+    font-size: 14px;
+}
+
+/* ─── أقسام الأدوار (Fieldsets) ──────────────────────────── */
+
+fieldset[data-dept-section] {
+    transition: all 0.3s ease;
+    border-right: 3px solid #417690;
+    margin: 10px 0;
+    border-radius: 4px;
+}
+
+fieldset[data-dept-section].dept-hidden {
+    display: none;
+}
+
+fieldset[data-dept-section] h2 {
+    position: relative;
+}
+
+/* ─── تأثيرات الحقول الشرطية ─────────────────────────────── */
+
+.form-row {
+    transition: all 0.2s ease;
+}
+
+/* ─── تحسينات RTL ────────────────────────────────────────── */
+
+html[dir="rtl"] #dept-chooser-fieldset,
+body.rtl #dept-chooser-fieldset {
+    direction: rtl;
+}
+
+html[dir="rtl"] .dept-chooser-grid,
+body.rtl .dept-chooser-grid {
+    direction: rtl;
+}
+
+html[dir="rtl"] fieldset[data-dept-section],
+body.rtl fieldset[data-dept-section] {
+    border-right: none;
+    border-left: 3px solid #417690;
+}
+
+/* ─── Responsive ─────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+    .dept-chooser-grid {
+        gap: 6px;
+    }
+    .dept-chip {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+    .dept-icon {
+        font-size: 14px;
+    }
+}

@@ -136,7 +136,7 @@
             </div>
         </div>
         <!-- Cross-Branch Access Log -->
-        {% if show_cross_branch_alert %}
+        {% if show_cross_branch_alert and not request.user.is_external_sales_director and not request.user.is_decorator_dept_manager and not request.user.is_decorator_dept_staff %}
             <div class="row mb-3">
                 <div class="col-12">
                     <div class="alert alert-info border-0 shadow-sm">
@@ -284,6 +284,17 @@
                                     <th>{% trans 'أنشئ بواسطة' %}:</th>
                                     <td>
                                         <i class="fas fa-user text-primary"></i> {{ customer.created_by.get_full_name|default:customer.created_by.username }}
+                                    </td>
+                                </tr>
+                            {% endif %}
+                            {% if customer.customer_type == 'designer' and customer.decorator_profile %}
+                                <tr>
+                                    <th style="white-space:nowrap"><i class="fas fa-paint-brush text-info me-1"></i> كود المهندس:</th>
+                                    <td>
+                                        <span class="badge bg-info bg-opacity-75 me-1">{{ customer.decorator_profile.designer_code }}</span>
+                                        {% if request.user.is_superuser or request.user.is_external_sales_director or request.user.is_decorator_dept_manager or request.user.is_decorator_dept_staff %}
+                                        <a href="{% url 'external_sales:engineer_detail' customer.decorator_profile.pk %}" class="text-info small" title="عرض الملف"><i class="fas fa-external-link-alt"></i></a>
+                                        {% endif %}
                                     </td>
                                 </tr>
                             {% endif %}
@@ -759,6 +770,55 @@
             </div>
         </div>
     </div>
+
+    {# ── Decorator Engineer Profile Card (visible to external sales & superuser) ── #}
+    {% if request.user.is_superuser or request.user.is_external_sales_director or request.user.is_decorator_dept_manager or request.user.is_decorator_dept_staff %}
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card shadow-sm border-info">
+                <div class="card-header bg-info bg-opacity-10 d-flex justify-content-between align-items-center">
+                    <span class="fw-bold small">
+                        <i class="fas fa-paint-brush text-info me-1"></i> المبيعات الخارجية — مهندس ديكور
+                    </span>
+                </div>
+                <div class="card-body">
+                    {% if customer.decorator_profile %}
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <span class="badge bg-success me-2">مسجّل</span>
+                                <span class="text-muted small">كود: {{ customer.decorator_profile.designer_code }}</span>
+                                <span class="mx-2">|</span>
+                                <span class="badge bg-{{ customer.decorator_profile.priority|default:'regular' }} bg-opacity-75">
+                                    {{ customer.decorator_profile.get_priority_display }}
+                                </span>
+                            </div>
+                            <a href="{% url 'external_sales:engineer_detail' customer.decorator_profile.pk %}"
+                               class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-eye me-1"></i> عرض ملف المهندس
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="text-muted small">
+                                <i class="fas fa-info-circle me-1"></i>
+                                هذا العميل ليس مسجلاً كمهندس ديكور.
+                            </span>
+                            {% if customer.customer_id %}
+                            <a href="{% url 'external_sales:create_profile' customer.customer_id %}"
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-plus me-1"></i> إنشاء ملف مهندس
+                            </a>
+                            {% else %}
+                            <span class="text-muted small"><i class="fas fa-exclamation-triangle me-1"></i>لا يوجد كود عميل</span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
 {% endblock %}
 {% block extra_css %}
     <style>

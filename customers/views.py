@@ -100,9 +100,11 @@ def customer_list(request):
             code_query = Q(code__icontains=search)
             phone_query = Q(phone__icontains=search) | Q(phone2__icontains=search)
             email_query = Q(email__icontains=search)
+            # البحث بكود مهندس الديكور (DEC-XXXX)
+            designer_code_query = Q(decorator_profile__designer_code__icontains=search)
 
             customers = customers.filter(
-                name_query | code_query | phone_query | email_query
+                name_query | code_query | phone_query | email_query | designer_code_query
             )
 
         # استخدام الفهارس للتصفية

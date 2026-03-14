@@ -27,14 +27,6 @@ class Command(BaseCommand):
                 "description": "إدارة طلبات العملاء",
             },
             {
-                "name": "المصنع",
-                "code": "factory",
-                "icon": "fas fa-industry",
-                "url_name": "factory:factory_list",
-                "order": 3,
-                "description": "إدارة عمليات الإنتاج في المصنع",
-            },
-            {
                 "name": "المخزون",
                 "code": "inventory",
                 "icon": "fas fa-boxes",

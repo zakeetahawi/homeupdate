@@ -55,6 +55,11 @@ echo -e "\n${BLUE}[3c] مزامنة إعدادات الناف بار...${NC}"
 python manage.py sync_department_navbar
 echo -e "${GREEN}  ✅ تم${NC}"
 
+# 3d. إنشاء بروفايلات مهندسي الديكور للعملاء من نوع designer
+echo -e "\n${BLUE}[3d] إنشاء بروفايلات مهندسي الديكور...${NC}"
+python manage.py create_decorator_profiles
+echo -e "${GREEN}  ✅ تم${NC}"
+
 # 4. إعادة تشغيل الخدمة عبر systemd
 echo -e "\n${BLUE}[4/4] إعادة تشغيل الخدمة...${NC}"
 if systemctl is-active --quiet run-production.service 2>/dev/null; then

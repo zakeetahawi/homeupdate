@@ -1,0 +1,92 @@
+{% extends "external_sales/base_dept.html" %}
+{% load static %}
+
+{% block breadcrumbs %}
+<li class="breadcrumb-item"><a href="{% url 'external_sales:index' %}">المبيعات الخارجية</a></li>
+<li class="breadcrumb-item"><a href="{% url 'external_sales:engineer_detail' profile.pk %}">{{ profile.customer.name }}</a></li>
+<li class="breadcrumb-item active">اهتمامات بالخامات</li>
+{% endblock %}
+
+{% block dept_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        {# Existing materials #}
+        {% if existing_materials %}
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white fw-bold"><i class="fas fa-palette me-1"></i> الخامات المسجلة</div>
+            <div class="card-body">
+                <div class="row g-2">
+                    {% for mi in existing_materials %}
+                    <div class="col-auto">
+                        <span class="badge bg-light text-dark border p-2">
+                            {{ mi.material_name }}
+                            {% if mi.interest_level == 'high' %}🔥{% elif mi.interest_level == 'medium' %}⭐{% endif %}
+                            <small class="text-muted">({{ mi.request_count }})</small>
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Add new interest #}
+        <div class="card shadow-sm">
+            <div class="card-header bg-white fw-bold">
+                <i class="fas fa-plus me-1"></i> إضافة اهتمام بخامة
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            {% for field, errors in form.errors.items %}
+                            {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_material_name" class="form-label fw-bold">اسم الخامة <span class="text-danger">*</span></label>
+                            {{ form.material_name }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_inventory_category" class="form-label">الفئة</label>
+                            {{ form.inventory_category }}
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_interest_level" class="form-label">مستوى الاهتمام</label>
+                            {{ form.interest_level }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_request_count" class="form-label">عدد الطلبات</label>
+                            {{ form.request_count }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_notes" class="form-label">ملاحظات</label>
+                        {{ form.notes }}
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'external_sales:engineer_detail' profile.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right me-1"></i>رجوع
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>حفظ
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

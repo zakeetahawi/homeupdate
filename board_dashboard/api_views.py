@@ -1,9 +1,11 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from django.db.models import Count, DurationField, ExpressionWrapper, F, Q, Sum
 from django.db.models.functions import TruncMonth
+from django.http import JsonResponse
 from django.utils import timezone
+from django.views import View
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.response import Response
@@ -15,6 +17,7 @@ from cutting.models import CuttingOrderItem
 from orders.models import Order, OrderItem
 from user_activity.models import UserSession
 
+from .mixins import BoardAccessMixin
 from .mixins_api import DashboardFilterMixin
 from .permissions import IsBoardMember
 
@@ -508,5 +511,206 @@ class BoardFinanceAPIView(APIView, DashboardFilterMixin):
                     "61_90": float(debt_61_90),
                     "over_90": float(debt_over_90),
                 },
+            }
+        )
+
+
+class BoardDecoratorDashboardView(BoardAccessMixin, View):
+    """
+    GET /board-level/api/decorator/
+    Returns JSON with KPIs, charts data, and tables for the decorator board tab.
+    """
+
+    def get(self, request):
+        from external_sales.models import (
+            DecoratorEngineerProfile,
+            EngineerLinkedOrder,
+        )
+
+        today = date.today()
+        month_start = today.replace(day=1)
+        six_months_ago = today - timedelta(days=180)
+        sixty_days_ago = today - timedelta(days=60)
+        thirty_days_ago = today - timedelta(days=30)
+
+        # ── KPI Cards ──────────────────────────────────────────
+        total_engineers = DecoratorEngineerProfile.objects.count()
+        active_engineers = DecoratorEngineerProfile.objects.filter(
+            customer__status="active"
+        ).count()
+        new_this_month = DecoratorEngineerProfile.objects.filter(
+            created_at__date__gte=month_start
+        ).count()
+
+        # Contact status
+        contacted_30d = DecoratorEngineerProfile.objects.filter(
+            last_contact_date__gte=thirty_days_ago
+        ).count()
+        never_contacted = DecoratorEngineerProfile.objects.filter(
+            last_contact_date__isnull=True
+        ).count()
+        inactive_60d = DecoratorEngineerProfile.objects.filter(
+            last_contact_date__lt=sixty_days_ago
+        ).count()
+
+        # Commissions
+        pending_comm = (
+            EngineerLinkedOrder.objects.filter(
+                commission_status="pending"
+            ).aggregate(total=Sum("commission_value"))["total"]
+            or 0
+        )
+
+        paid_comm_month = (
+            EngineerLinkedOrder.objects.filter(
+                commission_status="paid",
+                commission_paid_at__date__gte=month_start,
+            ).aggregate(total=Sum("commission_value"))["total"]
+            or 0
+        )
+
+        # ── Recently Added (last 10) ───────────────────────────
+        new_engineers = list(
+            DecoratorEngineerProfile.objects.filter(
+                created_at__date__gte=thirty_days_ago
+            )
+            .select_related("customer", "customer__branch", "assigned_staff")
+            .order_by("-created_at")[:10]
+            .values(
+                "pk",
+                "designer_code",
+                "customer__name",
+                "customer__phone",
+                "customer__branch__name",
+                "created_at",
+                "last_contact_date",
+                "priority",
+                "assigned_staff__first_name",
+                "assigned_staff__last_name",
+            )
+        )
+        for e in new_engineers:
+            e["contact_status"] = (
+                "contacted" if e["last_contact_date"] else "not_contacted"
+            )
+            e["created_at"] = (
+                str(e["created_at"])[:10] if e["created_at"] else ""
+            )
+            e["last_contact_date"] = (
+                str(e["last_contact_date"]) if e["last_contact_date"] else None
+            )
+
+        # ── Contact Status Breakdown (Donut Chart) ─────────────
+        contact_breakdown = {
+            "contacted_30d": contacted_30d,
+            "inactive_31_60d": DecoratorEngineerProfile.objects.filter(
+                last_contact_date__lt=thirty_days_ago,
+                last_contact_date__gte=sixty_days_ago,
+            ).count(),
+            "inactive_60d_plus": inactive_60d,
+            "never_contacted": never_contacted,
+        }
+
+        # ── Priority Breakdown ─────────────────────────────────
+        priority_breakdown = list(
+            DecoratorEngineerProfile.objects.values("priority")
+            .annotate(count=Count("id"))
+            .order_by("-count")
+        )
+
+        # ── Top 5 Engineers this month ─────────────────────────
+        top_engineers = list(
+            DecoratorEngineerProfile.objects.filter(
+                linked_orders__linked_at__date__gte=month_start
+            )
+            .annotate(
+                month_orders=Count("linked_orders"),
+                month_value=Sum("linked_orders__order__total_amount"),
+            )
+            .order_by("-month_value")
+            .select_related("customer")[:5]
+            .values(
+                "pk",
+                "designer_code",
+                "customer__name",
+                "month_orders",
+                "month_value",
+                "priority",
+                "last_contact_date",
+            )
+        )
+
+        # ── Monthly Trend (last 6 months) ─────────────────────
+        monthly_new = list(
+            DecoratorEngineerProfile.objects.filter(
+                created_at__date__gte=six_months_ago
+            )
+            .annotate(month=TruncMonth("created_at"))
+            .values("month")
+            .annotate(count=Count("id"))
+            .order_by("month")
+        )
+        monthly_orders = list(
+            EngineerLinkedOrder.objects.filter(
+                linked_at__date__gte=six_months_ago
+            )
+            .annotate(month=TruncMonth("linked_at"))
+            .values("month")
+            .annotate(
+                count=Count("id"), value=Sum("order__total_amount")
+            )
+            .order_by("month")
+        )
+        for row in monthly_new + monthly_orders:
+            row["month"] = (
+                str(row["month"])[:7] if row.get("month") else ""
+            )
+
+        # ── Inactive List ─────────────────────────────────────
+        inactive_list = list(
+            DecoratorEngineerProfile.objects.filter(
+                last_contact_date__lt=sixty_days_ago
+            )
+            .select_related("customer", "assigned_staff")
+            .order_by("last_contact_date")[:8]
+            .values(
+                "pk",
+                "designer_code",
+                "customer__name",
+                "customer__phone",
+                "last_contact_date",
+                "priority",
+                "assigned_staff__first_name",
+                "assigned_staff__last_name",
+            )
+        )
+        for e in inactive_list:
+            lcd = e["last_contact_date"]
+            e["last_contact_date"] = str(lcd) if lcd else None
+            e["days_since_contact"] = (
+                (today - lcd).days if lcd else None
+            )
+
+        return JsonResponse(
+            {
+                "kpis": {
+                    "total_engineers": total_engineers,
+                    "active_engineers": active_engineers,
+                    "new_this_month": new_this_month,
+                    "contacted_30d": contacted_30d,
+                    "never_contacted": never_contacted,
+                    "inactive_60d": inactive_60d,
+                    "pending_commission": float(pending_comm),
+                    "paid_this_month": float(paid_comm_month),
+                },
+                "new_engineers": new_engineers,
+                "contact_breakdown": contact_breakdown,
+                "priority_breakdown": priority_breakdown,
+                "top_engineers": top_engineers,
+                "monthly_trend": {
+                    "new": monthly_new,
+                    "orders": monthly_orders,
+                },
+                "inactive_list": inactive_list,
             }
         )

@@ -139,6 +139,10 @@ class UserRoleInline(admin.TabularInline):
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     list_per_page = 50  # عرض 50 صف كافتراضي
+
+    class Media:
+        js = ("accounts/admin/js/dynamic_user_admin.js",)
+        css = {"all": ("accounts/admin/css/dynamic_user_admin.css",)}
     list_display = (
         "username",
         "email",
@@ -183,6 +187,8 @@ class CustomUserAdmin(UserAdmin):
         "is_inspection_manager",
         "is_installation_manager",
         "is_warehouse_staff",
+        "is_decorator_dept_manager",
+        "is_decorator_dept_staff",
         "is_wholesale",
         "is_retail",
         "user_roles__role",
@@ -223,44 +229,95 @@ class CustomUserAdmin(UserAdmin):
             },
         ),
         (
-            _("الصلاحيات"),
+            _("الحالة والنظام"),
             {
                 "fields": (
                     "is_active",
                     "is_staff",
                     "is_superuser",
-                    "is_inspection_technician",
+                ),
+                "description": _("التحكم في حالة الحساب وصلاحيات النظام الأساسية"),
+            },
+        ),
+        (
+            _("أدوار المبيعات والإدارة"),
+            {
+                "fields": (
                     "is_salesperson",
                     "is_branch_manager",
                     "is_region_manager",
                     "is_sales_manager",
+                    "is_traffic_manager",
+                    "managed_branches",
+                    "is_wholesale",
+                    "is_retail",
+                ),
+                "description": _("أدوار البيع والإدارة العامة"),
+            },
+        ),
+        (
+            _("أدوار المصنع"),
+            {
+                "fields": (
                     "is_factory_manager",
                     "is_factory_accountant",
                     "is_factory_receiver",
+                ),
+                "description": _("أدوار التصنيع والإنتاج"),
+            },
+        ),
+        (
+            _("أدوار المعاينات والتركيبات"),
+            {
+                "fields": (
+                    "is_inspection_technician",
                     "is_inspection_manager",
                     "is_installation_manager",
-                    "is_traffic_manager",
-                    "managed_branches",
-                    "can_export",
-                    "can_edit_price",
-                    "can_apply_administrative_discount",
-                    "is_wholesale",
-                    "is_retail",
-                    "groups",
-                    "user_permissions",
                 ),
-                "classes": ("collapse",),
-                "description": _(
-                    "يمكنك إدارة أدوار المستخدم بشكل أسهل "
-                    'من خلال قسم "أدوار المستخدم" أدناه.'
-                ),
+                "description": _("أدوار المعاينة والتركيب"),
             },
         ),
         (
             _("أدوار المستودع"),
             {
                 "fields": ("is_warehouse_staff", "assigned_warehouse", "assigned_warehouses"),
-                "description": _("تحديد موظفي المستودع والمستودعات المخصصة لهم - يمكن تحديد أكثر من مستودع"),
+                "description": _("تحديد موظفي المستودع والمستودعات المخصصة لهم"),
+            },
+        ),
+        (
+            _("المبيعات الخارجية — مهندسو الديكور"),
+            {
+                "fields": (
+                    "is_decorator_dept_manager",
+                    "is_decorator_dept_staff",
+                ),
+                "description": _("أدوار قسم مهندسي الديكور ضمن المبيعات الخارجية"),
+            },
+        ),
+        (
+            _("صلاحيات إضافية"),
+            {
+                "fields": (
+                    "can_export",
+                    "can_edit_price",
+                    "can_apply_administrative_discount",
+                ),
+                "description": _("صلاحيات خاصة يمكن منحها لأي مستخدم"),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            _("المجموعات والصلاحيات المتقدمة"),
+            {
+                "fields": (
+                    "groups",
+                    "user_permissions",
+                ),
+                "classes": ("collapse",),
+                "description": _(
+                    "تعيين مجموعات الصلاحيات (Groups) والصلاحيات الفردية — "
+                    "للاستخدام المتقدم فقط"
+                ),
             },
         ),
         (
@@ -268,8 +325,7 @@ class CustomUserAdmin(UserAdmin):
             {
                 "fields": ("authorized_devices",),
                 "description": _(
-                    "🔐 الأجهزة التي يمكن للمستخدم الدخول منها (حد أقصى 20 جهاز)\n"
-                    "✅ يتم إضافة أجهزة الفرع تلقائياً عند تسجيل جهاز جديد أو تغيير الفرع"
+                    "الأجهزة التي يمكن للمستخدم الدخول منها (حد أقصى 20 جهاز)"
                 ),
                 "classes": ("collapse",),
             },

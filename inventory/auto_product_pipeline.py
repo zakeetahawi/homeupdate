@@ -146,30 +146,52 @@ def _auto_migrate_product(product):
                 variant_code = "DEFAULT"
 
             # التحقق من وجود BaseProduct
-            base_product = BaseProduct.objects.filter(code=product.code).first()
-            bp_created = False
+            # القاعدة: البحث دائماً بالاسم الأساسي (مثل "MM-2500") لضمان أن جميع المتغيرات
+            # (C1, C2, C3...) تذهب تحت نفس BaseProduct وليس كل واحد بمنتج أساسي منفصل.
+            # استخدام get_or_create يمنع race condition عند الرفع الجماعي المتزامن.
 
+            # تحديد الكود المناسب للـ BaseProduct الجديد:
+            # - للمنتجات ذات المتغيرات (MM-2500/C1): نستخدم كود المنتج الحالي كـ barcode للمتغير
+            #   فقط إذا لم يكن هناك BaseProduct بهذا الاسم بعد
+            # - للمنتجات البسيطة (بدون /): نستخدم الكود مباشرة
+            has_variant_separator = "/" in product.name or "\\" in product.name
+            bp_code_for_new = product.code  # barcode المتغير = كود للـ BaseProduct إذا هو الأول
+
+            # التحقق من وجود تعارض في الكود قبل get_or_create
+            conflicting_bp = BaseProduct.objects.filter(code=bp_code_for_new).exclude(
+                name__iexact=base_name
+            ).first()
+            if conflicting_bp:
+                # الكود مستخدم لـ BaseProduct آخر → نولّد كود من الاسم
+                import re as _re
+                bp_code_for_new = _re.sub(r'[^A-Za-z0-9_\-]', '_', base_name).upper()[:50]
+
+            # البحث أولاً بـ iexact (case-insensitive) لمنع التكرار
+            # ثم get_or_create بالاسم الدقيق للحماية من race condition في الـ threads
+            bp_created = False
+            base_product = BaseProduct.objects.filter(name__iexact=base_name).first()
             if not base_product:
-                # إنشاء يدوي مع flags لمنع signals المكررة
-                base_product = BaseProduct(
-                    code=product.code,
+                base_product, bp_created = BaseProduct.objects.get_or_create(
                     name=base_name,
-                    base_price=product.price,
-                    wholesale_price=product.wholesale_price,
-                    currency=product.currency,
-                    unit=product.unit,
-                    category=product.category,
-                    minimum_stock=product.minimum_stock,
-                    material=product.material or "",
-                    width=product.width or "",
+                    defaults={
+                        "code": bp_code_for_new,
+                        "base_price": product.price,
+                        "wholesale_price": product.wholesale_price,
+                        "currency": product.currency,
+                        "unit": product.unit,
+                        "category": product.category,
+                        "minimum_stock": product.minimum_stock,
+                        "material": product.material or "",
+                        "width": product.width or "",
+                    }
                 )
-                # Flags لمنع التكرار - المزامنة تتم في نهاية Pipeline
+
+            # تطبيق flags على المنتج الجديد فقط
+            if bp_created:
                 base_product._skip_cloudflare_sync = True
                 base_product._skip_qr_generation = True
                 base_product._skip_auto_pipeline = True
                 base_product._skip_legacy_sync = True
-                base_product.save()
-                bp_created = True
 
             # إنشاء المتغير
             if not variant_code:

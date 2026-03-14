@@ -1,0 +1,110 @@
+{% extends "external_sales/base_dept.html" %}
+{% load static %}
+
+{% block breadcrumbs %}
+<li class="breadcrumb-item"><a href="{% url 'external_sales:index' %}">المبيعات الخارجية</a></li>
+<li class="breadcrumb-item"><a href="{% url 'external_sales:decorator_dashboard' %}">مهندسو الديكور</a></li>
+<li class="breadcrumb-item"><a href="{% url 'external_sales:engineer_detail' profile.pk %}">{{ profile.customer.name }}</a></li>
+<li class="breadcrumb-item active">تسجيل تواصل</li>
+{% endblock %}
+
+{% block dept_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white fw-bold">
+                <i class="fas fa-phone me-1"></i> تسجيل تواصل مع {{ profile.customer.name }}
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            {% for field, errors in form.errors.items %}
+                            {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_contact_type" class="form-label fw-bold">نوع التواصل <span class="text-danger">*</span></label>
+                            {{ form.contact_type }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_outcome" class="form-label fw-bold">النتيجة <span class="text-danger">*</span></label>
+                            {{ form.outcome }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_contact_date" class="form-label fw-bold">تاريخ ووقت التواصل <span class="text-danger">*</span></label>
+                        {{ form.contact_date }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_notes" class="form-label">ملاحظات</label>
+                        <textarea name="notes" id="id_notes" class="form-control" rows="3">{{ form.notes.value|default:'' }}</textarea>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_next_followup_date" class="form-label">تاريخ المتابعة القادمة</label>
+                            <input type="date" name="next_followup_date" id="id_next_followup_date" class="form-control" value="{{ form.next_followup_date.value|default:'' }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_next_followup_notes" class="form-label">ملاحظات المتابعة</label>
+                            <input type="text" name="next_followup_notes" id="id_next_followup_notes" class="form-control" value="{{ form.next_followup_notes.value|default:'' }}">
+                        </div>
+                    </div>
+
+                    {# Appointment fields (shown conditionally) #}
+                    <div id="appointment-fields" class="card bg-light p-3 mb-3" style="display: none;">
+                        <h6 class="fw-bold mb-2"><i class="fas fa-calendar-check me-1"></i> بيانات الموعد</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6 mb-2">
+                                <label for="id_appointment_datetime" class="form-label">تاريخ ووقت الموعد</label>
+                                <input type="datetime-local" name="appointment_datetime" id="id_appointment_datetime" class="form-control" value="{{ form.appointment_datetime.value|default:'' }}">
+                            </div>
+                            <div class="col-md-6 mb-2">
+                                <label for="id_appointment_location" class="form-label">مكان الموعد</label>
+                                <input type="text" name="appointment_location" id="id_appointment_location" class="form-control" value="{{ form.appointment_location.value|default:'' }}">
+                            </div>
+                        </div>
+                        <div class="form-check mt-2">
+                            <input type="checkbox" name="appointment_confirmed" id="id_appointment_confirmed" class="form-check-input" {% if form.appointment_confirmed.value %}checked{% endif %}>
+                            <label for="id_appointment_confirmed" class="form-check-label">الموعد مؤكد</label>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'external_sales:engineer_detail' profile.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-right me-1"></i>إلغاء
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>حفظ
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block dept_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const outcomeSelect = document.getElementById('id_outcome');
+    const appointmentFields = document.getElementById('appointment-fields');
+    function toggleAppointment() {
+        appointmentFields.style.display = outcomeSelect.value === 'appointment_booked' ? 'block' : 'none';
+    }
+    outcomeSelect.addEventListener('change', toggleAppointment);
+    toggleAppointment();
+});
+</script>
+{% endblock %}

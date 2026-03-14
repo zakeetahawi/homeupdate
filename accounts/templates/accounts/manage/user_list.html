@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}إدارة المستخدمين{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'accounts/manage/css/user_management.css' %}">
+{% endblock %}
+{% block content %}
+<div class="container-fluid py-3">
+    <!-- العنوان -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <div>
+            <h4 class="mb-0"><i class="fas fa-users-cog me-2 text-primary"></i>إدارة المستخدمين</h4>
+            <small class="text-muted">عرض وتعديل أدوار وصلاحيات المستخدمين</small>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'accounts:role_management' %}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-user-shield me-1"></i>لوحة الأدوار
+            </a>
+        </div>
+    </div>
+
+    <!-- إحصائيات سريعة -->
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="stat-card card border-0 shadow-sm">
+                <div class="card-body py-2 text-center">
+                    <div class="stat-number text-primary">{{ total_users }}</div>
+                    <small class="text-muted">مستخدم نشط</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card card border-0 shadow-sm">
+                <div class="card-body py-2 text-center">
+                    <div class="stat-number text-success">{{ page_obj.paginator.count }}</div>
+                    <small class="text-muted">نتيجة{% if q or branch_id or role_filter %} (مصفّاة){% endif %}</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card card border-0 shadow-sm">
+                <div class="card-body py-2 text-center">
+                    <div class="stat-number text-info">{{ branches|length }}</div>
+                    <small class="text-muted">فرع</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-card card border-0 shadow-sm">
+                <div class="card-body py-2 text-center">
+                    <div class="stat-number text-warning">{{ role_choices|length }}</div>
+                    <small class="text-muted">دور متاح</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- الفلاتر -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body py-2">
+            <form method="get" class="row g-2 align-items-end" id="filter-form">
+                <div class="col-md-4">
+                    <label class="form-label small mb-1 text-muted"><i class="fas fa-search me-1"></i>بحث</label>
+                    <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm"
+                           placeholder="اسم المستخدم، الاسم، الهاتف، البريد..." autofocus>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small mb-1 text-muted"><i class="fas fa-code-branch me-1"></i>الفرع</label>
+                    <select name="branch" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">كل الفروع</option>
+                        {% for branch in branches %}
+                        <option value="{{ branch.id }}" {% if branch_id == branch.id|stringformat:"d" %}selected{% endif %}>{{ branch.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small mb-1 text-muted"><i class="fas fa-user-tag me-1"></i>الدور</label>
+                    <select name="role" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">كل الأدوار</option>
+                        {% for key, display in role_choices %}
+                        <option value="{{ key }}" {% if role_filter == key %}selected{% endif %}>{{ display }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-1">
+                    <button type="submit" class="btn btn-sm btn-primary flex-grow-1"><i class="fas fa-filter me-1"></i>تصفية</button>
+                    {% if q or branch_id or role_filter %}
+                    <a href="{% url 'accounts:user_manage_list' %}" class="btn btn-sm btn-outline-secondary" title="إزالة الفلاتر"><i class="fas fa-times"></i></a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- الجدول -->
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:45px"></th>
+                        <th>المستخدم</th>
+                        <th>الفرع</th>
+                        <th>الأدوار</th>
+                        <th class="text-center" style="width:80px">الصلاحيات</th>
+                        <th style="width:90px" class="text-center">إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in page_obj %}
+                    <tr>
+                        <td>
+                            {% if u.image %}
+                            <img src="{{ u.image.url }}" class="user-avatar" alt="">
+                            {% else %}
+                            <span class="user-avatar-placeholder">{{ u.username|first|upper }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'accounts:user_manage_edit' u.pk %}" class="text-decoration-none">
+                                <strong class="text-dark">{{ u.get_full_name|default:u.username }}</strong>
+                            </a>
+                            <br>
+                            <small class="text-muted">
+                                {{ u.username }}
+                                {% if u.phone %} · <i class="fas fa-phone fa-xs"></i> {{ u.phone }}{% endif %}
+                                {% if u.is_superuser %} · <span class="badge bg-danger" style="font-size:9px">سوبر</span>{% endif %}
+                                {% if u.is_staff %} · <span class="badge bg-dark" style="font-size:9px">Staff</span>{% endif %}
+                            </small>
+                        </td>
+                        <td>
+                            {% if u.branch %}
+                            <span class="badge bg-light text-dark border"><i class="fas fa-map-marker-alt me-1 text-muted"></i>{{ u.branch.name }}</span>
+                            {% else %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% with active_roles=u.get_active_roles %}
+                            {% for role_key in active_roles %}
+                                {% for rk, rd in role_display_map.items %}
+                                    {% if rk == role_key %}
+                                    <span class="role-badge role-badge-{{ role_key }}">{{ rd }}</span>
+                                    {% endif %}
+                                {% endfor %}
+                            {% empty %}
+                            <span class="text-muted small">بدون أدوار</span>
+                            {% endfor %}
+                            {% endwith %}
+                        </td>
+                        <td class="text-center">
+                            {% with perms_count=u.get_role_permissions|length %}
+                            <span class="badge {% if perms_count > 10 %}bg-success{% elif perms_count > 0 %}bg-info{% else %}bg-secondary{% endif %}">{{ perms_count }}</span>
+                            {% endwith %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'accounts:user_manage_edit' u.pk %}" class="btn btn-sm btn-outline-primary" title="تعديل الأدوار والصلاحيات">
+                                <i class="fas fa-edit"></i> تعديل
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">
+                        <i class="fas fa-search fa-2x mb-2 d-block text-muted"></i>
+                        لا يوجد مستخدمين مطابقين
+                    </td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <div class="card-footer bg-white border-top">
+            <nav>
+                <ul class="pagination pagination-sm justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&branch={{ branch_id }}&role={{ role_filter }}"><i class="fas fa-chevron-right"></i></a></li>
+                    {% endif %}
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                        <li class="page-item"><a class="page-link" href="?page={{ num }}&q={{ q }}&branch={{ branch_id }}&role={{ role_filter }}">{{ num }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}&branch={{ branch_id }}&role={{ role_filter }}"><i class="fas fa-chevron-left"></i></a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

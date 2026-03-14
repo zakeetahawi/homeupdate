@@ -1,0 +1,759 @@
+{% extends "external_sales/base_dept.html" %}
+{% load static %}
+
+{% block breadcrumbs %}
+<li class="breadcrumb-item"><a href="{% url 'external_sales:index' %}">المبيعات الخارجية</a></li>
+<li class="breadcrumb-item"><a href="{% url 'external_sales:decorator_dashboard' %}">مهندسو الديكور</a></li>
+<li class="breadcrumb-item"><a href="{% url 'external_sales:engineer_list' %}">القائمة</a></li>
+<li class="breadcrumb-item active">{{ profile.customer.name }}</li>
+{% endblock %}
+
+{% block dept_css %}
+<style>
+    /* ── Profile Card ── */
+    .profile-header {
+        background: #fff;
+        border-radius: 14px;
+        padding: 0;
+        margin-bottom: 0;
+        box-shadow: 0 2px 12px rgba(0,0,0,.10);
+        overflow: hidden;
+    }
+    .profile-header-banner {
+        background: linear-gradient(120deg, #1a237e 0%, #283593 60%, #3949ab 100%);
+        padding: 1.25rem 1.75rem 3.5rem;
+        position: relative;
+    }
+    .profile-header-banner::after {
+        content: '';
+        position: absolute; bottom: 0; left: 0; right: 0; height: 28px;
+        background: #fff;
+        border-radius: 14px 14px 0 0;
+    }
+    .profile-avatar {
+        width: 76px; height: 76px; border-radius: 50%;
+        background: rgba(255,255,255,.15);
+        border: 3px solid rgba(255,255,255,.5);
+        display: flex; align-items: center; justify-content: center; font-size: 2rem;
+        color: #fff;
+        flex-shrink: 0;
+    }
+    .profile-name { color: #fff; font-size: 1.45rem; font-weight: 700; line-height: 1.2; }
+    .profile-sub  { color: rgba(255,255,255,.75); font-size: .88rem; }
+    .profile-meta { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .6rem; }
+    .profile-meta span, .profile-meta a {
+        display: inline-flex; align-items: center; gap: .3rem;
+        font-size: .78rem; color: rgba(255,255,255,.88);
+        background: rgba(255,255,255,.14);
+        border: 1px solid rgba(255,255,255,.22);
+        padding: .18rem .6rem; border-radius: 20px;
+    }
+    .profile-meta a { text-decoration: none; }
+    .profile-meta a:hover { background: rgba(255,255,255,.26); }
+
+    /* Stats row sits on the white/banner boundary */
+    .profile-stats-row {
+        padding: 0 1.5rem 1.25rem;
+        margin-top: -1px;
+    }
+    .stat-box {
+        background: #f8f9fe;
+        border: 1px solid #e3e8f7;
+        border-radius: 10px;
+        padding: .6rem 1rem;
+        text-align: center;
+        flex: 1;
+    }
+    .stat-box-value { font-size: 1.3rem; font-weight: 700; color: #1a237e; line-height: 1.2; }
+    .stat-box-label { font-size: .72rem; color: #888; margin-top: .1rem; }
+
+    /* ── Tabs ── */
+    .profile-tabs-wrapper {
+        background: #f0f2fa;
+        border-radius: 12px;
+        padding: .35rem .4rem;
+        display: flex;
+        gap: .25rem;
+        flex-wrap: wrap;
+        margin-bottom: 1.25rem;
+    }
+    .profile-tabs-wrapper .nav-link {
+        border: none !important;
+        border-radius: 8px !important;
+        font-size: .84rem;
+        font-weight: 600;
+        color: #555;
+        padding: .42rem .9rem;
+        transition: background .15s, color .15s;
+        white-space: nowrap;
+    }
+    .profile-tabs-wrapper .nav-link:hover { background: rgba(26,35,126,.08); color: #1a237e; }
+    .profile-tabs-wrapper .nav-link.active {
+        background: #1a237e !important;
+        color: #fff !important;
+        box-shadow: 0 2px 8px rgba(26,35,126,.3);
+    }
+    .tab-section-title { font-weight: 600; font-size: 1rem; margin-bottom: .75rem; }
+</style>
+{% endblock %}
+
+{% block dept_content %}
+{# ── Profile Card ── #}
+<div class="profile-header mb-4">
+    {# Banner with avatar + name #}
+    <div class="profile-header-banner">
+        <div class="d-flex align-items-start gap-3">
+            <div class="profile-avatar"><i class="fas fa-user-tie"></i></div>
+            <div class="flex-grow-1 min-w-0">
+                <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+                    <div>
+                        <div class="profile-name">{{ profile.customer.name }}</div>
+                        {% if profile.company_office_name %}
+                        <div class="profile-sub"><i class="fas fa-building me-1"></i>{{ profile.company_office_name }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <span class="priority-badge priority-{{ profile.priority }}">{{ profile.get_priority_display }}</span>
+                        <a href="{% url 'external_sales:engineer_edit' profile.pk %}" class="btn btn-light btn-sm">
+                            <i class="fas fa-edit me-1"></i>تعديل
+                        </a>
+                    </div>
+                </div>
+                <div class="profile-meta">
+                    <span><i class="fas fa-hashtag"></i>{{ profile.designer_code }}</span>
+                    {% if profile.city %}<span><i class="fas fa-map-marker-alt"></i>{{ profile.city }}</span>{% endif %}
+                    {% if profile.years_of_experience %}<span><i class="fas fa-briefcase"></i>{{ profile.years_of_experience }} سنة خبرة</span>{% endif %}
+                    <span><i class="fas fa-calendar-plus"></i>أُضيف {{ profile.created_at|date:"Y/m/d" }}</span>
+                    {% if profile.assigned_staff %}<span><i class="fas fa-user-check"></i>{{ profile.assigned_staff.get_full_name }}</span>{% endif %}
+                    {% if profile.instagram_handle %}<a href="https://instagram.com/{{ profile.instagram_handle }}" target="_blank" rel="noopener noreferrer"><i class="fab fa-instagram"></i>Instagram</a>{% endif %}
+                    {% if profile.linkedin_url %}<a href="{{ profile.linkedin_url }}" target="_blank" rel="noopener noreferrer"><i class="fab fa-linkedin"></i>LinkedIn</a>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Stats Row #}
+    <div class="profile-stats-row">
+        <div class="d-flex gap-3 flex-wrap">
+            <div class="stat-box">
+                <div class="stat-box-value">{{ profile.linked_orders.count }}</div>
+                <div class="stat-box-label"><i class="fas fa-shopping-cart me-1 text-primary"></i>الطلبات</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-box-value">{{ profile.linked_customers.count }}</div>
+                <div class="stat-box-label"><i class="fas fa-users me-1 text-success"></i>العملاء</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-box-value">{{ analytics.pending_commission|floatformat:0 }}</div>
+                <div class="stat-box-label"><i class="fas fa-coins me-1 text-warning"></i>عمولة معلقة</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-box-value">{{ profile.last_contact_date|date:"d/m"|default:"—" }}</div>
+                <div class="stat-box-label"><i class="fas fa-phone-alt me-1 text-info"></i>آخر تواصل</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Tab Navigation ── #}
+<div class="profile-tabs-wrapper" id="profileTabs" role="tablist">
+    <a class="nav-link active" data-bs-toggle="tab" href="#tab-overview" role="tab"><i class="fas fa-th-large me-1"></i>نظرة عامة</a>
+    <a class="nav-link" data-bs-toggle="tab" href="#tab-customers" role="tab"><i class="fas fa-users me-1"></i>العملاء{% if profile.linked_customers.count %} <span class="badge bg-white bg-opacity-25 ms-1" style="font-size:.72rem">{{ profile.linked_customers.count }}</span>{% endif %}</a>
+    <a class="nav-link" data-bs-toggle="tab" href="#tab-orders" role="tab"><i class="fas fa-shopping-cart me-1"></i>الطلبات{% if profile.linked_orders.count %} <span class="badge bg-white bg-opacity-25 ms-1" style="font-size:.72rem">{{ profile.linked_orders.count }}</span>{% endif %}</a>
+    <a class="nav-link" data-bs-toggle="tab" href="#tab-contacts" role="tab"><i class="fas fa-comments me-1"></i>سجل التواصل</a>
+    <a class="nav-link" data-bs-toggle="tab" href="#tab-commissions" role="tab"><i class="fas fa-coins me-1"></i>العمولات{% if pending_commissions %} <span class="badge bg-warning text-dark ms-1" style="font-size:.72rem">{{ pending_commissions|length }}</span>{% endif %}</a>
+    <a class="nav-link" data-bs-toggle="tab" href="#tab-analytics" role="tab"><i class="fas fa-chart-bar me-1"></i>التحليلات</a>
+</div>
+
+<div class="tab-content" id="profileTabContent">
+    {# ══ Tab 1: Overview ══ #}
+    <div class="tab-pane fade show active" id="tab-overview">
+        {# KPI cards #}
+        <div class="row g-3 mb-4">
+            <div class="col-lg col-md-4 col-6">
+                <div class="kpi-card kpi-primary text-center">
+                    <div class="kpi-value">{{ analytics.total_clients }}</div>
+                    <div class="kpi-label">العملاء</div>
+                </div>
+            </div>
+            <div class="col-lg col-md-4 col-6">
+                <div class="kpi-card kpi-success text-center">
+                    <div class="kpi-value">{{ analytics.total_orders }}</div>
+                    <div class="kpi-label">الطلبات</div>
+                </div>
+            </div>
+            <div class="col-lg col-md-4 col-6">
+                <div class="kpi-card kpi-info text-center">
+                    <div class="kpi-value">{{ analytics.total_value|floatformat:0 }}</div>
+                    <div class="kpi-label">قيمة الطلبات ({{ currency_symbol }})</div>
+                </div>
+            </div>
+            <div class="col-lg col-md-4 col-6">
+                <div class="kpi-card kpi-warning text-center">
+                    <div class="kpi-value">{{ analytics.pending_commission|floatformat:0 }}</div>
+                    <div class="kpi-label">عمولات معلقة ({{ currency_symbol }})</div>
+                </div>
+            </div>
+            <div class="col-lg col-md-4 col-6">
+                <div class="kpi-card kpi-danger text-center">
+                    <div class="kpi-value">{{ analytics.avg_monthly_orders|floatformat:1 }}</div>
+                    <div class="kpi-label">متوسط شهري</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            {# Notes #}
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white fw-bold"><i class="fas fa-sticky-note me-1"></i> ملاحظات داخلية</div>
+                    <div class="card-body">
+                        <p>{{ profile.internal_notes|default:"لا توجد ملاحظات"|linebreaksbr }}</p>
+                    </div>
+                </div>
+            </div>
+            {# Upcoming Follow-ups #}
+            <div class="col-lg-6">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white fw-bold"><i class="fas fa-bell me-1 text-warning"></i> متابعات قادمة</div>
+                    <div class="card-body p-0">
+                        {% if upcoming_followups %}
+                        <ul class="list-group list-group-flush">
+                            {% for fu in upcoming_followups %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center {% if fu.next_followup_date < today %}list-group-item-danger{% endif %}">
+                                <div>
+                                    <strong>{{ fu.next_followup_date|date:"Y-m-d" }}</strong>
+                                    {% if fu.next_followup_notes %}<br><small class="text-muted">{{ fu.next_followup_notes|truncatechars:60 }}</small>{% endif %}
+                                </div>
+                                <span class="badge bg-{% if fu.next_followup_date < today %}danger{% else %}secondary{% endif %}">{{ fu.get_contact_type_display }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <div class="text-center text-muted py-3">لا توجد متابعات مجدولة</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Material Interests #}
+        {% if profile.material_interests.all %}
+        <div class="card shadow-sm mt-3">
+            <div class="card-header bg-white fw-bold"><i class="fas fa-palette me-1"></i> اهتمامات بالخامات</div>
+            <div class="card-body">
+                <div class="row g-2">
+                    {% for mi in profile.material_interests.all %}
+                    <div class="col-auto">
+                        <span class="badge bg-light text-dark border p-2">
+                            {{ mi.material_name }}
+                            {% if mi.interest_level == 'high' %}🔥{% elif mi.interest_level == 'medium' %}⭐{% endif %}
+                            <small class="text-muted">({{ mi.request_count }})</small>
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    {# ══ Tab 2: Linked Customers ══ #}
+    <div class="tab-pane fade" id="tab-customers">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="tab-section-title mb-0">العملاء المرتبطون</h5>
+            <span class="text-muted small"><i class="fas fa-info-circle me-1"></i>يتم ربط العملاء تلقائياً عند ربط طلباتهم</span>
+        </div>
+        {% with linked_customers=profile.linked_customers.all %}
+        {% if linked_customers %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>اسم العميل</th>
+                        <th>الفرع</th>
+                        <th>الهاتف</th>
+                        <th>العلاقة</th>
+                        <th>تاريخ الربط</th>
+                        <th>إجراءات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lc in linked_customers %}
+                    <tr>
+                        <td>{{ lc.customer.name }}</td>
+                        <td>{{ lc.customer.branch.name|default:"-" }}</td>
+                        <td dir="ltr">{{ lc.customer.phone|default:"-" }}</td>
+                        <td>{{ lc.get_relationship_type_display }}</td>
+                        <td>{{ lc.linked_at|date:"Y-m-d" }}</td>
+                        <td>
+                            <a href="{% url 'external_sales:unlink_customer' profile.pk lc.pk %}" class="btn btn-outline-danger btn-sm quick-action-btn" onclick="return confirm('هل أنت متأكد من فك الربط؟')">
+                                <i class="fas fa-unlink"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4">
+            <i class="fas fa-users fa-2x mb-2 d-block"></i>
+            لا يوجد عملاء مرتبطون بعد — قم بربط طلب وسيُضاف العميل تلقائياً
+        </div>
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    {# ══ Tab 3: Linked Orders ══ #}
+    <div class="tab-pane fade" id="tab-orders">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="tab-section-title mb-0">الطلبات المرتبطة</h5>
+            <a href="{% url 'external_sales:link_order' profile.pk %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-link me-1"></i>ربط طلب
+            </a>
+        </div>
+        {% with linked_orders=profile.linked_orders.all %}
+        {% if linked_orders %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>رقم الطلب</th>
+                        <th>العميل</th>
+                        <th>التاريخ</th>
+                        <th>الإجمالي</th>
+                        <th>العمولة %</th>
+                        <th>قيمة العمولة</th>
+                        <th>الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lo in linked_orders %}
+                    <tr>
+                        <td><a href="{% url 'orders:order_detail_by_number' lo.order.order_number %}" class="fw-bold text-decoration-none" target="_blank">{{ lo.order.order_number }}</a></td>
+                        <td>{{ lo.order.customer.name|default:"-" }}</td>
+                        <td>{{ lo.order.order_date|date:"Y-m-d" }}</td>
+                        <td>{{ lo.order.total_amount|floatformat:2 }}</td>
+                        <td>{{ lo.commission_rate }}%</td>
+                        <td>{{ lo.commission_value|floatformat:2 }}</td>
+                        <td>
+                            <span class="badge status-badge-{{ lo.commission_status }}">{{ lo.get_commission_status_display }}</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4">
+            <i class="fas fa-shopping-cart fa-2x mb-2 d-block"></i>
+            لا يوجد طلبات مرتبطة بعد
+        </div>
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    {# ══ Tab 4: Contact Log ══ #}
+    <div class="tab-pane fade" id="tab-contacts">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="tab-section-title mb-0">سجل التواصل</h5>
+            <a href="{% url 'external_sales:add_contact' profile.pk %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus me-1"></i>تسجيل تواصل
+            </a>
+        </div>
+        {% if recent_contacts %}
+        <div class="timeline">
+            {% for log in recent_contacts %}
+            <div class="timeline-item {% if log.next_followup_date and log.next_followup_date < today %}overdue{% endif %}">
+                <div class="card shadow-sm mb-0
+                    {% if log.contact_type == 'call' %}border-start border-3 border-primary
+                    {% elif log.contact_type == 'whatsapp' %}border-start border-3 border-success
+                    {% elif log.contact_type == 'meeting' %}border-start border-3 border-info
+                    {% elif log.contact_type == 'visit' %}border-start border-3 border-warning
+                    {% elif log.contact_type == 'email' %}border-start border-3 border-secondary
+                    {% else %}border-start border-3 border-secondary{% endif %}
+                    {% if log.next_followup_date and log.next_followup_date < today %}bg-danger bg-opacity-10{% endif %}">
+                    <div class="card-body py-2 px-3">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-1">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="rounded-circle p-2 d-flex align-items-center justify-content-center
+                                    {% if log.contact_type == 'call' %}bg-primary bg-opacity-10
+                                    {% elif log.contact_type == 'whatsapp' %}bg-success bg-opacity-10
+                                    {% elif log.contact_type == 'meeting' %}bg-info bg-opacity-10
+                                    {% elif log.contact_type == 'visit' %}bg-warning bg-opacity-10
+                                    {% elif log.contact_type == 'email' %}bg-secondary bg-opacity-10
+                                    {% else %}bg-secondary bg-opacity-10{% endif %}"
+                                    style="width:34px;height:34px;flex-shrink:0">
+                                    {% if log.contact_type == 'call' %}<i class="fas fa-phone text-primary"></i>
+                                    {% elif log.contact_type == 'whatsapp' %}<i class="fab fa-whatsapp text-success"></i>
+                                    {% elif log.contact_type == 'meeting' %}<i class="fas fa-handshake text-info"></i>
+                                    {% elif log.contact_type == 'visit' %}<i class="fas fa-map-marker-alt text-warning"></i>
+                                    {% elif log.contact_type == 'email' %}<i class="fas fa-envelope text-secondary"></i>
+                                    {% else %}<i class="fas fa-comment text-muted"></i>{% endif %}
+                                </span>
+                                <div>
+                                    <span class="fw-bold text-dark small">{{ log.get_contact_type_display }}</span>
+                                    <span class="badge ms-1
+                                        {% if log.outcome == 'interested' %}bg-success
+                                        {% elif log.outcome == 'not_interested' %}bg-danger
+                                        {% elif log.outcome == 'pending' or log.outcome == 'no_answer' %}bg-warning text-dark
+                                        {% elif log.outcome == 'appointment_set' %}bg-info
+                                        {% else %}bg-secondary{% endif %}
+                                        bg-opacity-75" style="font-size:.72rem">
+                                        {{ log.get_outcome_display }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted d-block">{{ log.contact_date|date:"Y-m-d" }}</small>
+                                <small class="text-muted">{{ log.contact_date|date:"H:i" }}</small>
+                            </div>
+                        </div>
+
+                        {% if log.notes %}
+                        <p class="mb-1 mt-2 text-secondary small border-top pt-1">{{ log.notes|truncatechars:200 }}</p>
+                        {% endif %}
+
+                        {% if log.next_followup_date %}
+                        <div class="small mt-1 {% if log.next_followup_date < today %}text-danger{% else %}text-info{% endif %}">
+                            <i class="fas fa-bell me-1"></i>
+                            <strong>متابعة:</strong> {{ log.next_followup_date|date:"Y-m-d" }}
+                            {% if log.next_followup_notes %} — {{ log.next_followup_notes|truncatechars:60 }}{% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if log.appointment_datetime %}
+                        <div class="small text-primary mt-1">
+                            <i class="fas fa-calendar-check me-1"></i>
+                            <strong>موعد:</strong> {{ log.appointment_datetime|date:"Y-m-d H:i" }}
+                            {% if log.appointment_location %} — {{ log.appointment_location }}{% endif %}
+                            {% if log.appointment_confirmed %}<span class="badge bg-success ms-1">مؤكد</span>{% endif %}
+                        </div>
+                        {% endif %}
+
+                        <div class="mt-1 text-muted" style="font-size:.72rem">
+                            <i class="fas fa-user-circle me-1"></i>{{ log.created_by.get_full_name|default:"-" }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        <a href="{% url 'external_sales:contact_list' profile.pk %}" class="btn btn-outline-primary btn-sm mt-3">
+            <i class="fas fa-list me-1"></i>عرض الكل
+        </a>
+        {% else %}
+        <div class="text-center text-muted py-4">
+            <i class="fas fa-comments fa-2x mb-2 d-block"></i>
+            لم يتم تسجيل أي تواصل بعد
+        </div>
+        {% endif %}
+    </div>
+
+    {# ══ Tab 5: Commissions ══ #}
+    <div class="tab-pane fade" id="tab-commissions">
+        <h5 class="tab-section-title">العمولات</h5>
+        {# Summary Cards #}
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <div class="kpi-card kpi-warning text-center">
+                    <div class="kpi-value">{{ analytics.pending_commission|floatformat:0 }}</div>
+                    <div class="kpi-label">معلقة ({{ currency_symbol }})</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="kpi-card kpi-success text-center">
+                    <div class="kpi-value">{{ analytics.approved_commission|default:0|floatformat:0 }}</div>
+                    <div class="kpi-label">معتمدة ({{ currency_symbol }})</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="kpi-card kpi-info text-center">
+                    <div class="kpi-value">{{ analytics.paid_commission|default:0|floatformat:0 }}</div>
+                    <div class="kpi-label">مدفوعة ({{ currency_symbol }})</div>
+                </div>
+            </div>
+        </div>
+        {% if pending_commissions %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>رقم الطلب</th>
+                        <th>الإجمالي</th>
+                        <th>النسبة %</th>
+                        <th>قيمة العمولة</th>
+                        <th>الحالة</th>
+                        {% if request.user.is_decorator_dept_manager or request.user.is_superuser %}
+                        <th>إجراءات</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in pending_commissions %}
+                    <tr>
+                        <td>{{ c.order.order_number }}</td>
+                        <td>{{ c.order.total_amount|floatformat:2 }}</td>
+                        <td>{{ c.commission_rate }}%</td>
+                        <td>{{ c.commission_value|floatformat:2 }}</td>
+                        <td><span class="badge status-badge-{{ c.commission_status }}">{{ c.get_commission_status_display }}</span></td>
+                        {% if request.user.is_decorator_dept_manager or request.user.is_superuser %}
+                        <td>
+                            <form method="post" action="{% url 'external_sales:approve_commission' c.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-sm quick-action-btn"><i class="fas fa-check"></i> اعتماد</button>
+                            </form>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-3">لا توجد عمولات معلقة</div>
+        {% endif %}
+    </div>
+
+    {# ══ Tab 6: Performance Analytics ══ #}
+    <div class="tab-pane fade" id="tab-analytics">
+        <h5 class="tab-section-title">تحليلات الأداء</h5>
+
+        {# KPI Row #}
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="kpi-card kpi-primary text-center">
+                    <div class="kpi-value">{{ analytics.total_clients }}</div>
+                    <div class="kpi-label">إجمالي العملاء</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card kpi-success text-center">
+                    <div class="kpi-value">{{ analytics.total_orders }}</div>
+                    <div class="kpi-label">إجمالي الطلبات</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card kpi-info text-center">
+                    <div class="kpi-value">{{ analytics.total_value|floatformat:0 }}</div>
+                    <div class="kpi-label">إجمالي الإيرادات ({{ currency_symbol }})</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="kpi-card kpi-warning text-center">
+                    <div class="kpi-value">{{ analytics.avg_monthly_orders|floatformat:1 }}</div>
+                    <div class="kpi-label">متوسط شهري (طلب)</div>
+                </div>
+            </div>
+        </div>
+
+        {# Charts Row #}
+        <div class="row g-3 mb-4">
+            <div class="col-lg-8">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white fw-bold small">النشاط الشهري — آخر 6 أشهر</div>
+                    <div class="card-body"><canvas id="monthlyActivityChart" height="220"></canvas></div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-white fw-bold small">توزيع العمولات</div>
+                    <div class="card-body d-flex align-items-center justify-content-center">
+                        <canvas id="commissionPieChart" height="220"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Orders Summary Table #}
+        {% with orders_summary=profile.linked_orders.all %}
+        {% if orders_summary %}
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white fw-bold small d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-shopping-cart me-1 text-primary"></i>ملخص الطلبات المرتبطة</span>
+                <span class="badge bg-primary bg-opacity-75">{{ analytics.total_orders }} طلب</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>رقم الطلب</th>
+                                <th>العميل</th>
+                                <th>التاريخ</th>
+                                <th>القيمة ({{ currency_symbol }})</th>
+                                <th>نوع الربط</th>
+                                <th>العمولة %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for lo in orders_summary %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'orders:order_detail_by_number' lo.order.order_number %}" class="fw-bold text-decoration-none" target="_blank">
+                                        {{ lo.order.order_number }}
+                                    </a>
+                                </td>
+                                <td class="small">{{ lo.order.customer.name|default:"-"|truncatechars:25 }}</td>
+                                <td class="small text-muted">{{ lo.order.order_date|date:"Y-m-d"|default:"-" }}</td>
+                                <td class="fw-bold">{{ lo.order.total_amount|floatformat:0 }}</td>
+                                <td>
+                                    {% if lo.link_type == 'auto' %}
+                                    <span class="badge bg-success bg-opacity-75" style="font-size:.7rem">تلقائي</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary bg-opacity-75" style="font-size:.7rem">يدوي</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if lo.commission_rate %}
+                                    {{ lo.commission_rate }}%
+                                    {% else %}
+                                    <span class="text-muted small">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light fw-bold">
+                            <tr>
+                                <td colspan="3" class="text-end">الإجمالي:</td>
+                                <td>{{ analytics.total_value|floatformat:0 }} {{ currency_symbol }}</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% if analytics.top_materials %}
+        <div class="card shadow-sm">
+            <div class="card-header bg-white fw-bold small">أكثر الخامات المطلوبة</div>
+            <div class="card-body"><canvas id="materialsBarChart" height="180"></canvas></div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block dept_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Persist active tab
+    const hash = window.location.hash;
+    if (hash) {
+        const tab = document.querySelector('a[href="' + hash + '"]');
+        if (tab) new bootstrap.Tab(tab).show();
+    }
+    document.querySelectorAll('#profileTabs a').forEach(function(t) {
+        t.addEventListener('shown.bs.tab', function(e) {
+            history.replaceState(null, null, e.target.getAttribute('href'));
+        });
+    });
+
+    // Per-engineer data from context
+    const monthlyMonths = {{ analytics.monthly_months|safe }};
+    const monthlyContacts = {{ analytics.monthly_contacts|safe }};
+    const monthlyOrders = {{ analytics.monthly_orders|safe }};
+    const commPending = {{ analytics.pending_commission|floatformat:0|default:"0" }};
+    const commApproved = {{ analytics.approved_commission|floatformat:0|default:"0" }};
+    const commPaid = {{ analytics.paid_commission|floatformat:0|default:"0" }};
+
+    // Analytics charts (lazy loaded when tab shown)
+    let chartsLoaded = false;
+    document.querySelector('a[href="#tab-analytics"]').addEventListener('shown.bs.tab', function() {
+        if (chartsLoaded) return;
+        chartsLoaded = true;
+
+        const chartOpts = {
+            responsive: true,
+            plugins: { legend: { position: 'top' } },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                x: { grid: { display: false } }
+            }
+        };
+
+        // Monthly Activity (per-engineer)
+        new Chart(document.getElementById('monthlyActivityChart'), {
+            type: 'bar',
+            data: {
+                labels: monthlyMonths,
+                datasets: [
+                    {
+                        label: 'التواصل',
+                        data: monthlyContacts,
+                        backgroundColor: 'rgba(46,125,50,.7)',
+                        borderRadius: 4,
+                        order: 2
+                    },
+                    {
+                        label: 'الطلبات',
+                        data: monthlyOrders,
+                        backgroundColor: 'rgba(26,35,126,.7)',
+                        borderRadius: 4,
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'top' } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        // Commission Pie
+        if (commPending + commApproved + commPaid > 0) {
+            new Chart(document.getElementById('commissionPieChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['معلقة', 'معتمدة', 'مدفوعة'],
+                    datasets: [{
+                        data: [commPending, commApproved, commPaid],
+                        backgroundColor: ['#f57c00', '#2e7d32', '#1a237e']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        } else {
+            document.getElementById('commissionPieChart').parentElement.innerHTML =
+                '<div class="text-center text-muted py-5"><i class="fas fa-chart-pie fa-2x mb-2 d-block"></i>لا توجد عمولات بعد</div>';
+        }
+
+        // Materials bar (if data exists)
+        {% if analytics.top_materials %}
+        const matLabels = [{% for m in analytics.top_materials %}"{{ m.material_name }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+        const matValues = [{% for m in analytics.top_materials %}{{ m.request_count }}{% if not forloop.last %},{% endif %}{% endfor %}];
+        new Chart(document.getElementById('materialsBarChart'), {
+            type: 'bar',
+            data: {
+                labels: matLabels,
+                datasets: [{
+                    label: 'عدد الطلبات',
+                    data: matValues,
+                    backgroundColor: ['#1a237e','#2e7d32','#f57c00','#0288d1','#c62828']
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+        {% endif %}
+    });
+});
+</script>
+{% endblock %}

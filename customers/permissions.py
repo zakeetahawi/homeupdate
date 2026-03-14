@@ -24,6 +24,17 @@ def get_user_customers_queryset(user, search_term=None):
     if hasattr(user, "is_installation_manager") and user.is_installation_manager:
         return Customer.objects.all()
 
+    # المبيعات الخارجية — فقط عملاء الجملة ومهندسي الديكور
+    _es_roles = (
+        getattr(user, "is_external_sales_director", False)
+        or getattr(user, "is_decorator_dept_manager", False)
+        or getattr(user, "is_decorator_dept_staff", False)
+    )
+    if _es_roles:
+        return Customer.objects.filter(
+            customer_type__in=["wholesale", "designer"]
+        )
+
     # مدير المنطقة يرى عملاء الفروع المُدارة
     if hasattr(user, "is_region_manager") and user.is_region_manager:
         managed_branches = user.managed_branches.all()
@@ -131,6 +142,15 @@ def can_user_view_customer(user, customer, allow_cross_branch=False):
         managed_branches = user.managed_branches.all()
         return customer.branch in managed_branches
 
+    # المبيعات الخارجية — عملاء الجملة ومهندسي الديكور
+    _es_roles = (
+        getattr(user, "is_external_sales_director", False)
+        or getattr(user, "is_decorator_dept_manager", False)
+        or getattr(user, "is_decorator_dept_staff", False)
+    )
+    if _es_roles:
+        return getattr(customer, "customer_type", None) in ["wholesale", "designer"]
+
     # إذا كان مسموح بالوصول عبر الفروع (من خلال البحث بكود أو رقم هاتف)
     if allow_cross_branch:
         return True
@@ -189,6 +209,15 @@ def can_user_edit_customer(user, customer):
         return customer.created_by == user or (
             hasattr(user, "branch") and user.branch and customer.branch == user.branch
         )
+
+    # المبيعات الخارجية — تعديل عملاء الجملة ومهندسي الديكور
+    _es_roles = (
+        getattr(user, "is_external_sales_director", False)
+        or getattr(user, "is_decorator_dept_manager", False)
+        or getattr(user, "is_decorator_dept_staff", False)
+    )
+    if _es_roles:
+        return getattr(customer, "customer_type", None) in ["wholesale", "designer"]
 
     # فني المعاينة لا يمكنه تعديل العملاء
     if hasattr(user, "is_inspection_technician") and user.is_inspection_technician:
@@ -253,6 +282,15 @@ def can_user_create_customer(user):
 
     # البائع يمكنه إنشاء عملاء
     if hasattr(user, "is_salesperson") and user.is_salesperson:
+        return True
+
+    # المبيعات الخارجية يمكنهم إنشاء عملاء
+    _es_roles = (
+        getattr(user, "is_external_sales_director", False)
+        or getattr(user, "is_decorator_dept_manager", False)
+        or getattr(user, "is_decorator_dept_staff", False)
+    )
+    if _es_roles:
         return True
 
     # فني المعاينة لا يمكنه إنشاء عملاء
@@ -343,7 +381,7 @@ def apply_customer_permissions(user, customers_queryset):
         else:
             return customers_queryset.none()
 
-    # البائع يرى عملاء فرعه أو ا��عملاء الذين أنشأهم
+    # البائع يرى عملاء فرعه أو العملاء الذين أنشأهم
     if hasattr(user, "is_salesperson") and user.is_salesperson:
         from django.db import models
 
@@ -353,6 +391,17 @@ def apply_customer_permissions(user, customers_queryset):
             )
         else:
             return customers_queryset.filter(created_by=user)
+
+    # المبيعات الخارجية — فقط عملاء الجملة ومهندسي الديكور
+    _es_roles = (
+        getattr(user, "is_external_sales_director", False)
+        or getattr(user, "is_decorator_dept_manager", False)
+        or getattr(user, "is_decorator_dept_staff", False)
+    )
+    if _es_roles:
+        return customers_queryset.filter(
+            customer_type__in=["wholesale", "designer"]
+        )
 
     # فني المعاينة يرى عملاء فرعه فقط
     if hasattr(user, "is_inspection_technician") and user.is_inspection_technician:
@@ -454,6 +503,21 @@ def get_user_customer_permissions(user):
         permissions.update(
             {
                 "can_view_branch_customers": True,  # للقراءة فقط
+            }
+        )
+
+    elif (
+        getattr(user, "is_external_sales_director", False)
+        or getattr(user, "is_decorator_dept_manager", False)
+        or getattr(user, "is_decorator_dept_staff", False)
+    ):
+        # المبيعات الخارجية — رؤية عملاء الجملة والمهندسين + إضافة عملاء
+        permissions.update(
+            {
+                "can_view_all_customers": True,  # مفلتر بـ wholesale/designer في get_user_customers_queryset
+                "can_view_own_customers": True,
+                "can_create_customers": True,
+                "can_edit_customers": True,
             }
         )
 

@@ -981,7 +981,9 @@ class Order(SoftDeleteMixin, models.Model):
             return False, f"خطأ في رفع ملف العقد: {str(e)}"
 
     def __str__(self):
-        return f"{self.order_number} - {self.customer.name}"
+        if 'customer' in self._state.fields_cache:
+            return f"{self.order_number} - {self.customer.name}"
+        return self.order_number or f"Order #{self.pk}"
 
     def get_absolute_url(self):
         """إرجاع رابط تفاصيل الطلب باستخدام رقم الطلب"""

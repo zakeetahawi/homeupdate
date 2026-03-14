@@ -2242,10 +2242,61 @@
             </div>
         </div>
     </div>
+
+    {# ── Linked Decorator Engineer Card (visible to dept staff only) ── #}
+    {% if request.user.is_superuser or request.user.is_decorator_dept_manager or request.user.is_decorator_dept_staff %}
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card shadow-sm border-info">
+                <div class="card-header bg-info bg-opacity-10 py-2">
+                    <span class="fw-bold small">
+                        <i class="fas fa-paint-brush text-info me-1"></i> مهندس ديكور مرتبط
+                    </span>
+                </div>
+                <div class="card-body py-2">
+                    {% with linked=order.engineer_link %}
+                    {% if linked %}
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <a href="{% url 'external_sales:engineer_detail' linked.engineer.pk %}"
+                                   class="text-decoration-none fw-semibold">
+                                    <i class="fas fa-user-tie me-1"></i>
+                                    {{ linked.engineer.customer.name }}
+                                </a>
+                                <span class="text-muted small mx-2">({{ linked.engineer.designer_code }})</span>
+                                {% if linked.commission_status == 'pending' %}
+                                    <span class="badge bg-warning">عمولة معلقة</span>
+                                {% elif linked.commission_status == 'approved' %}
+                                    <span class="badge bg-info">عمولة معتمدة</span>
+                                {% elif linked.commission_status == 'paid' %}
+                                    <span class="badge bg-success">عمولة مدفوعة</span>
+                                {% endif %}
+                                {% if linked.commission_value %}
+                                    <span class="text-muted small ms-1">({{ linked.commission_value|floatformat:0 }} ريال)</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="text-muted small">
+                                <i class="fas fa-unlink me-1"></i> غير مرتبط بمهندس ديكور
+                            </span>
+                            <a href="#" onclick="alert('يرجى الربط من صفحة المهندس'); return false;"
+                               class="btn btn-outline-info btn-sm">
+                                <i class="fas fa-link me-1"></i> ربط بمهندس
+                            </a>
+                        </div>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
 {% endblock %}
 {% block extra_css %}
-    <style>
-/* Modal fixes to prevent black screen */
+<style>
 .modal-backdrop {
     display: none !important;
     opacity: 0 !important;

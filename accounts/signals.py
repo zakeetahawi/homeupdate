@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.db.models import Q
-from django.db.models.signals import m2m_changed, post_save
+from django.db.models.signals import m2m_changed, post_delete, post_save
 from django.dispatch import receiver
 
 from .models import Department, Role, UserRole
@@ -281,3 +281,78 @@ def track_user_permissions_changed(sender, instance, action, pk_set, **kwargs):
             )
     except Exception as e:
         print(f"❌ خطأ في تسجيل تغيير الصلاحيات: {e}")
+
+
+# ─── Phase 4: مزامنة Boolean fields ↔ UserRole M2M ──────────────
+
+_SYNCING_ROLES = False  # منع التكرار اللامتناهي
+
+
+@receiver(post_save, sender=User)
+def sync_boolean_roles_to_userrole(sender, instance, **kwargs):
+    """مزامنة حقول الأدوار البولينية إلى UserRole M2M عند الحفظ"""
+    global _SYNCING_ROLES
+    if _SYNCING_ROLES:
+        return
+    _SYNCING_ROLES = True
+    try:
+        active_role_keys = instance.get_active_roles()
+        for field_name, role_key in User.ROLE_FIELD_MAP.items():
+            role_obj, _created = Role.objects.get_or_create(
+                name=role_key,
+                defaults={"description": f"دور {role_key} (تلقائي)", "is_system_role": True},
+            )
+            if role_key in active_role_keys:
+                UserRole.objects.get_or_create(user=instance, role=role_obj)
+            else:
+                UserRole.objects.filter(user=instance, role=role_obj).delete()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"خطأ في مزامنة أدوار {instance.username}: {e}")
+    finally:
+        _SYNCING_ROLES = False
+
+
+# ─── Phase 5: مزامنة صلاحيات Role → user_permissions عند إسناد/إزالة دور ──────
+
+@receiver(post_save, sender=UserRole)
+def sync_role_permissions_on_assign(sender, instance, created, **kwargs):
+    """عند إسناد دور لمستخدم، نسخ صلاحيات الدور إلى user_permissions"""
+    if not created:
+        return
+    try:
+        role = instance.role
+        user = instance.user
+        for permission in role.permissions.all():
+            user.user_permissions.add(permission)
+        # مسح كاش الصلاحيات
+        from django.core.cache import cache
+        cache.delete(f"user_permissions_{user.id}")
+        for suffix in [f"{user.is_staff}_{user.is_superuser}", "True_True", "True_False", "False_False"]:
+            cache.delete(f"ctx_navbar_{user.pk}_{suffix}")
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"خطأ في مزامنة صلاحيات الدور: {e}")
+
+
+@receiver(post_delete, sender=UserRole)
+def sync_role_permissions_on_remove(sender, instance, **kwargs):
+    """عند إزالة دور من مستخدم، حذف الصلاحيات الفريدة لهذا الدور"""
+    try:
+        role = instance.role
+        user = instance.user
+        # نزيل فقط الصلاحيات غير موجودة في أدوار أخرى للمستخدم
+        for permission in role.permissions.all():
+            other_roles_have = UserRole.objects.filter(
+                user=user, role__permissions=permission
+            ).exists()
+            if not other_roles_have:
+                user.user_permissions.remove(permission)
+        # مسح كاش الصلاحيات
+        from django.core.cache import cache
+        cache.delete(f"user_permissions_{user.id}")
+        for suffix in [f"{user.is_staff}_{user.is_superuser}", "True_True", "True_False", "False_False"]:
+            cache.delete(f"ctx_navbar_{user.pk}_{suffix}")
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"خطأ في إزالة صلاحيات الدور: {e}")

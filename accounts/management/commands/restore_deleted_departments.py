@@ -76,17 +76,6 @@ class Command(BaseCommand):
                 "is_active": True,
             },
             {
-                "name": "المصنع",
-                "code": "factory",
-                "url_name": "factory:index",
-                "department_type": "department",
-                "icon": "fas fa-industry",
-                "order": 60,
-                "has_pages": True,
-                "is_core": True,
-                "is_active": True,
-            },
-            {
                 "name": "التقارير",
                 "code": "reports",
                 "url_name": "reports:list",

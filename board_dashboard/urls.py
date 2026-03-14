@@ -18,4 +18,5 @@ urlpatterns = [
     ),
     path("api/staff/", api_views.BoardStaffAPIView.as_view(), name="api_staff"),
     path("api/finance/", api_views.BoardFinanceAPIView.as_view(), name="api_finance"),
+    path("api/decorator/", api_views.BoardDecoratorDashboardView.as_view(), name="api_decorator"),
 ]

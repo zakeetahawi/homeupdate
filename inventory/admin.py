@@ -351,6 +351,16 @@ class StockTransferAdmin(admin.ModelAdmin):
     )
     inlines = [StockTransferItemInline]
 
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related(
+                "from_warehouse", "to_warehouse", "created_by",
+                "approved_by", "completed_by",
+            )
+        )
+
     def save_model(self, request, obj, form, change):
         if not change:  # إذا كان إنشاء جديد
             obj.created_by = request.user

@@ -60,7 +60,6 @@ class Command(BaseCommand):
             "inventory",
             "inspections",
             "installations",
-            "factory",
             "reports",
             "data_management",
         ]

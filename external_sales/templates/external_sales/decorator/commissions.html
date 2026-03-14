@@ -1,0 +1,151 @@
+{% extends "external_sales/base_dept.html" %}
+{% load static %}
+
+{% block breadcrumbs %}
+<li class="breadcrumb-item"><a href="{% url 'external_sales:index' %}">المبيعات الخارجية</a></li>
+<li class="breadcrumb-item"><a href="{% url 'external_sales:decorator_dashboard' %}">مهندسو الديكور</a></li>
+<li class="breadcrumb-item active">إدارة العمولات</li>
+{% endblock %}
+
+{% block dept_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="fas fa-coins me-2"></i>إدارة العمولات</h4>
+    <a href="{% url 'external_sales:export_commissions' %}" class="btn btn-success btn-sm">
+        <i class="fas fa-file-excel me-1"></i>تصدير Excel
+    </a>
+</div>
+
+{# Summary Cards #}
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="kpi-card kpi-warning d-flex justify-content-between align-items-center">
+            <div>
+                <div class="kpi-value">{{ summary.pending|floatformat:0|default:"0" }}</div>
+                <div class="kpi-label">عمولات معلقة ({{ currency_symbol }})</div>
+            </div>
+            <div class="kpi-icon"><i class="fas fa-clock"></i></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="kpi-card kpi-success d-flex justify-content-between align-items-center">
+            <div>
+                <div class="kpi-value">{{ summary.approved|floatformat:0|default:"0" }}</div>
+                <div class="kpi-label">عمولات معتمدة ({{ currency_symbol }})</div>
+            </div>
+            <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="kpi-card kpi-info d-flex justify-content-between align-items-center">
+            <div>
+                <div class="kpi-value">{{ summary.paid|floatformat:0|default:"0" }}</div>
+                <div class="kpi-label">عمولات مدفوعة ({{ currency_symbol }})</div>
+            </div>
+            <div class="kpi-icon"><i class="fas fa-money-bill-wave"></i></div>
+        </div>
+    </div>
+</div>
+
+{# Filter Bar #}
+<div class="btn-group btn-group-sm mb-3">
+    <a href="{% url 'external_sales:commissions' %}" class="btn {% if not request.GET.status %}btn-primary{% else %}btn-outline-primary{% endif %}">الكل</a>
+    <a href="?status=pending" class="btn {% if request.GET.status == 'pending' %}btn-warning{% else %}btn-outline-warning{% endif %}">معلقة</a>
+    <a href="?status=approved" class="btn {% if request.GET.status == 'approved' %}btn-success{% else %}btn-outline-success{% endif %}">معتمدة</a>
+    <a href="?status=paid" class="btn {% if request.GET.status == 'paid' %}btn-info{% else %}btn-outline-info{% endif %}">مدفوعة</a>
+</div>
+
+{# Table #}
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        {% if commissions %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>كود المهندس</th>
+                        <th>اسم المهندس</th>
+                        <th>رقم الطلب</th>
+                        <th>عميل الطلب</th>
+                        <th>إجمالي الطلب</th>
+                        <th>النسبة %</th>
+                        <th>قيمة العمولة</th>
+                        <th>الحالة</th>
+                        {% if request.user.is_decorator_dept_manager or request.user.is_superuser %}
+                        <th>إجراءات</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in commissions %}
+                    <tr>
+                        <td><code>{{ c.engineer.designer_code }}</code></td>
+                        <td>
+                            <a href="{% url 'external_sales:engineer_detail' c.engineer.pk %}">
+                                {{ c.engineer.customer.name }}
+                            </a>
+                        </td>
+                        <td>{{ c.order.order_number }}</td>
+                        <td>{{ c.order.customer.name|default:"-" }}</td>
+                        <td>{{ c.order.total_amount|floatformat:2 }}</td>
+                        <td>{{ c.commission_rate }}%</td>
+                        <td class="fw-bold">{{ c.commission_value|floatformat:2 }}</td>
+                        <td>
+                            <span class="badge status-badge-{{ c.commission_status }}">{{ c.get_commission_status_display }}</span>
+                        </td>
+                        {% if request.user.is_decorator_dept_manager or request.user.is_superuser %}
+                        <td>
+                            {% if c.commission_status == 'pending' %}
+                            <form method="post" action="{% url 'external_sales:approve_commission' c.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-sm quick-action-btn" onclick="return confirm('اعتماد هذه العمولة؟')">
+                                    <i class="fas fa-check"></i> اعتماد
+                                </button>
+                            </form>
+                            {% elif c.commission_status == 'approved' %}
+                            <form method="post" action="{% url 'external_sales:pay_commission' c.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-info btn-sm quick-action-btn" onclick="return confirm('تأكيد الدفع؟')">
+                                    <i class="fas fa-money-bill"></i> دفع
+                                </button>
+                            </form>
+                            {% elif c.commission_status == 'paid' %}
+                            <small class="text-muted">{{ c.commission_paid_at|date:"Y-m-d" }}</small>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {# Pagination #}
+        {% if is_paginated %}
+        <nav class="d-flex justify-content-center py-3">
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">&laquo;</a></li>
+                {% endif %}
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                    <li class="page-item"><a class="page-link" href="?page={{ num }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">{{ num }}</a></li>
+                    {% endif %}
+                {% endfor %}
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">&raquo;</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center text-muted py-5">
+            <i class="fas fa-coins fa-3x mb-3 d-block"></i>
+            <h5>لا توجد عمولات مسجلة</h5>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

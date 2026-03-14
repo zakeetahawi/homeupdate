@@ -1,0 +1,84 @@
+{% extends "external_sales/base_dept.html" %}
+{% load static %}
+
+{% block breadcrumbs %}
+<li class="breadcrumb-item"><a href="{% url 'external_sales:index' %}">المبيعات الخارجية</a></li>
+<li class="breadcrumb-item"><a href="{% url 'external_sales:decorator_dashboard' %}">مهندسو الديكور</a></li>
+<li class="breadcrumb-item active">استيراد مهندسين</li>
+{% endblock %}
+
+{% block dept_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        {# Instructions #}
+        <div class="alert alert-info">
+            <h6 class="fw-bold"><i class="fas fa-info-circle me-1"></i> تعليمات الاستيراد</h6>
+            <ul class="mb-2">
+                <li>حمّل القالب وأدخل بيانات المهندسين</li>
+                <li>يجب أن يكون اسم المهندس مطابقاً لاسم العميل في النظام</li>
+                <li>الأولوية: vip / active / regular / cold (اختياري)</li>
+                <li>الحد الأقصى لحجم الملف: 5 ميجابايت</li>
+            </ul>
+            <a href="{% url 'external_sales:import_template' %}" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-download me-1"></i>تحميل القالب
+            </a>
+        </div>
+
+        {# Upload Form #}
+        <div class="card shadow-sm">
+            <div class="card-header bg-white fw-bold">
+                <i class="fas fa-file-upload me-1"></i> رفع ملف Excel
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="importForm">
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            {% for field, errors in form.errors.items %}
+                            {% for error in errors %}<li>{{ error }}</li>{% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="id_file" class="form-label">اختر ملف Excel (.xlsx)</label>
+                        <input type="file" name="file" id="id_file" class="form-control" accept=".xlsx" required>
+                        <div class="form-text">الحد الأقصى: 5 ميجابايت — فقط .xlsx</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="fas fa-upload me-1"></i>استيراد
+                        <span id="spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {# Django messages for results #}
+        {% if messages %}
+        <div class="mt-3">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message|linebreaksbr }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block dept_js %}
+<script>
+document.getElementById('importForm').addEventListener('submit', function() {
+    const btn = document.getElementById('submitBtn');
+    const spinner = document.getElementById('spinner');
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+});
+</script>
+{% endblock %}

@@ -40,8 +40,8 @@ log_success() {
 # ======== تنظيف عند الإيقاف (SIGTERM/SIGINT) ========
 cleanup() {
 	log "🛑 بدء إيقاف نظام HomeUpdate..."
-	# إيقاف العمليات الفرعية
-	for proc in daphne "celery.*worker" "celery.*beat" cloudflared "db-backup.sh"; do
+	# إيقاف العمليات الفرعية (cloudflared يُدار بـ systemd بشكل مستقل)
+	for proc in daphne "celery.*worker" "celery.*beat" "db-backup.sh"; do
 		pkill -f "$proc" 2>/dev/null && sleep 1
 	done
 	# تحرير المنفذ
@@ -83,7 +83,7 @@ log "🧹 تنظيف العمليات القديمة والمنافذ..."
 pkill -f "daphne" 2>/dev/null || true
 pkill -f "celery.*worker" 2>/dev/null || true
 pkill -f "celery.*beat" 2>/dev/null || true
-pkill -f "cloudflared" 2>/dev/null || true
+# cloudflared يُدار بخدمة systemd مستقلة - لا نوقفه هنا
 pkill -f "monitor-service.sh" 2>/dev/null || true
 fuser -k 8000/tcp 2>/dev/null || true
 sleep 3
@@ -186,23 +186,9 @@ else
 	# لا نوقف التنفيذ، سيحاول monitor إعادة التشغيل
 fi
 
-# تشغيل Cloudflare Tunnel
-log "🌐 تشغيل Cloudflare Tunnel..."
-if [ -f "$PROJECT_DIR/cloudflared" ]; then
-	chmod +x "$PROJECT_DIR/cloudflared"
-	"$PROJECT_DIR/cloudflared" tunnel --config "$PROJECT_DIR/cloudflared.yml" run >>"$LOGS_DIR/cloudflared.log" 2>&1 &
-	echo $! >"$PIDS_DIR/cloudflared.pid"
-	sleep 5
-
-	if kill -0 $(cat "$PIDS_DIR/cloudflared.pid") 2>/dev/null; then
-		log_success "تم تشغيل Cloudflare Tunnel (PID: $(cat $PIDS_DIR/cloudflared.pid))"
-		log "🌐 الموقع متاح على: https://elkhawaga.uk"
-	else
-		log_error "فشل في تشغيل Cloudflare Tunnel"
-	fi
-else
-	log_error "ملف cloudflared غير موجود"
-fi
+# ℹ️ Cloudflare Tunnel يُدار بـ cloudflared.service (systemd مستقل)
+# يُعاد تشغيله تلقائياً عند التحديث دون إيقاف هذه الخدمة
+log "🌐 Cloudflare Tunnel يعمل عبر cloudflared.service المستقل"
 
 # تشغيل سكريبت النسخ الاحتياطي
 log "💾 تشغيل خدمة النسخ الاحتياطي..."

@@ -1,0 +1,123 @@
+{% extends "external_sales/base_dept.html" %}
+{% load static %}
+
+{% block breadcrumbs %}
+<li class="breadcrumb-item"><a href="{% url 'external_sales:index' %}">المبيعات الخارجية</a></li>
+<li class="breadcrumb-item"><a href="{% url 'external_sales:decorator_dashboard' %}">مهندسو الديكور</a></li>
+<li class="breadcrumb-item active">المتابعات القادمة</li>
+{% endblock %}
+
+{% block dept_content %}
+
+{# ── Header ── #}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0"><i class="fas fa-bell me-2 text-warning"></i>المتابعات القادمة</h4>
+        <small class="text-muted">متابعات الـ 30 يوماً القادمة والمتأخرة</small>
+    </div>
+    <a href="{% url 'external_sales:decorator_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-right me-1"></i>العودة
+    </a>
+</div>
+
+{# ── Overdue ── #}
+{% if overdue_followups %}
+<div class="card shadow-sm mb-4 border-0" style="border-right: 4px solid #c62828 !important;">
+    <div class="card-header fw-bold" style="background:#fff5f5;">
+        <i class="fas fa-clock me-1 text-danger"></i>
+        متابعات متأخرة
+        <span class="badge bg-danger ms-2">{{ overdue_followups.count }}</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>المهندس</th>
+                        <th>تاريخ المتابعة المطلوبة</th>
+                        <th>نوع التواصل</th>
+                        <th>ملاحظات</th>
+                        <th>بواسطة</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in overdue_followups %}
+                    <tr class="table-danger">
+                        <td>
+                            <a href="{% url 'external_sales:engineer_detail' log.engineer.pk %}#tab-contacts" class="fw-bold text-decoration-none">
+                                {{ log.engineer.customer.name }}
+                            </a>
+                        </td>
+                        <td><span class="text-danger fw-bold">{{ log.next_followup_date|date:"Y-m-d" }}</span></td>
+                        <td>{{ log.get_contact_type_display }}</td>
+                        <td><small class="text-muted">{{ log.next_followup_notes|default:"-"|truncatechars:50 }}</small></td>
+                        <td>{{ log.created_by.get_full_name|default:"-" }}</td>
+                        <td>
+                            <a href="{% url 'external_sales:add_contact' log.engineer.pk %}" class="btn btn-danger btn-sm quick-action-btn">
+                                <i class="fas fa-phone"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── Upcoming (30 days) ── #}
+<div class="card shadow-sm">
+    <div class="card-header bg-white fw-bold">
+        <i class="fas fa-calendar-check me-1 text-warning"></i>
+        خلال الـ 30 يوماً القادمة
+        <span class="badge bg-warning text-dark ms-2">{{ followups.count }}</span>
+    </div>
+    <div class="card-body p-0">
+        {% if followups %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>المهندس</th>
+                        <th>موظف المتابعة</th>
+                        <th>تاريخ المتابعة</th>
+                        <th>نوع التواصل</th>
+                        <th>ملاحظات</th>
+                        <th>بواسطة</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in followups %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'external_sales:engineer_detail' log.engineer.pk %}#tab-contacts" class="text-decoration-none fw-bold">
+                                {{ log.engineer.customer.name }}
+                            </a>
+                        </td>
+                        <td>{{ log.engineer.assigned_staff.get_full_name|default:"—" }}</td>
+                        <td>{{ log.next_followup_date|date:"Y-m-d" }}</td>
+                        <td>{{ log.get_contact_type_display }}</td>
+                        <td><small class="text-muted">{{ log.next_followup_notes|default:"-"|truncatechars:60 }}</small></td>
+                        <td>{{ log.created_by.get_full_name|default:"-" }}</td>
+                        <td>
+                            <a href="{% url 'external_sales:add_contact' log.engineer.pk %}" class="btn btn-outline-primary btn-sm quick-action-btn">
+                                <i class="fas fa-phone"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-5">
+            <i class="fas fa-check-circle fa-2x mb-2 d-block text-success"></i>
+            لا توجد متابعات مجدولة للـ 30 يوماً القادمة
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

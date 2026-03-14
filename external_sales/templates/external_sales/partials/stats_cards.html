@@ -1,0 +1,14 @@
+{# Reusable KPI stats cards - pass stats dict from context #}
+<div class="row g-3 mb-4">
+    {% for card in stat_cards %}
+    <div class="col-lg col-md-4 col-6">
+        <div class="kpi-card kpi-{{ card.color|default:'primary' }} d-flex justify-content-between align-items-center">
+            <div>
+                <div class="kpi-value">{{ card.value|default:0 }}</div>
+                <div class="kpi-label">{{ card.label }}</div>
+            </div>
+            <div class="kpi-icon"><i class="fas fa-{{ card.icon|default:'chart-bar' }}"></i></div>
+        </div>
+    </div>
+    {% endfor %}
+</div>

@@ -30,4 +30,40 @@ class BoardDashboardView(BoardAccessMixin, TemplateView):
         widgets = BoardWidgetSettings.objects.filter(is_active=True).order_by("order")
         context["widgets"] = {w.name: w for w in widgets}
 
+        # External Sales Summary (lightweight — for overview tab, server-side)
+        try:
+            from datetime import date, timedelta
+
+            from django.db.models import Sum
+
+            from external_sales.models import (
+                DecoratorEngineerProfile,
+                EngineerLinkedOrder,
+            )
+
+            today = date.today()
+            month_start = today.replace(day=1)
+            sixty_days_ago = today - timedelta(days=60)
+
+            context["ext_sales_summary"] = {
+                "total_decorator_engineers": DecoratorEngineerProfile.objects.count(),
+                "active_engineers": DecoratorEngineerProfile.objects.filter(
+                    customer__status="active"
+                ).count(),
+                "no_contact_engineers": DecoratorEngineerProfile.objects.filter(
+                    last_contact_date__lt=sixty_days_ago
+                ).count(),
+                "pending_commissions_value": EngineerLinkedOrder.objects.filter(
+                    commission_status="pending"
+                ).aggregate(t=Sum("commission_value"))["t"]
+                or 0,
+                "new_this_month": DecoratorEngineerProfile.objects.filter(
+                    created_at__date__gte=month_start
+                )
+                .select_related("customer", "customer__branch")
+                .order_by("-created_at")[:8],
+            }
+        except Exception:
+            context["ext_sales_summary"] = None
+
         return context

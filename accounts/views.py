@@ -1666,8 +1666,10 @@ def role_assign(request, pk):
 @staff_member_required
 def role_management(request):
     """
-    الصفحة الرئيسية لإدارة الأدوار
+    لوحة إدارة الأدوار — تعرض التسلسل الهرمي ومصفوفة الصلاحيات وعدد المستخدمين
     """
+    from accounts.models import ROLE_HIERARCHY
+
     roles = Role.objects.all().prefetch_related("user_roles", "permissions")
     users = (
         User.objects.filter(is_active=True)
@@ -1687,13 +1689,52 @@ def role_management(request):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
+    # ─── بيانات التسلسل الهرمي ─────────────────────
+    hierarchy_data = []
+    for role_key, role_data in sorted(ROLE_HIERARCHY.items(), key=lambda x: x[1].get("level", 99)):
+        if role_key in ("system_admin", "user"):
+            continue
+        # عدد المستخدمين الذين لديهم هذا الدور مفعّل
+        field_name = None
+        for f, k in User.ROLE_FIELD_MAP.items():
+            if k == role_key:
+                field_name = f
+                break
+        user_count = 0
+        if field_name:
+            user_count = User.objects.filter(is_active=True, **{field_name: True}).count()
+
+        hierarchy_data.append({
+            "key": role_key,
+            "display": role_data.get("display", role_key),
+            "level": role_data.get("level", 99),
+            "inherits_from": role_data.get("inherits_from", []),
+            "permissions": role_data.get("permissions", []),
+            "user_count": user_count,
+        })
+
+    # ─── كل الصلاحيات الفريدة (لمصفوفة الصلاحيات) ─────────────
+    all_perms = set()
+    for rd in hierarchy_data:
+        all_perms.update(rd["permissions"])
+    all_perms.discard("all")
+    all_perms_sorted = sorted(all_perms)
+
+    # مصفوفة: role → set(permissions)
+    perm_matrix = {}
+    for rd in hierarchy_data:
+        perm_matrix[rd["key"]] = set(rd["permissions"])
+
     context = {
         "page_obj": page_obj,
         "users": users,
         "role_type": role_type,
-        "title": "إدارة الأدوار والصلاحيات",
+        "title": "لوحة إدارة الأدوار والصلاحيات",
         "total_roles": roles.count(),
         "total_users": users.count(),
+        "hierarchy_data": hierarchy_data,
+        "all_perms_sorted": all_perms_sorted,
+        "perm_matrix": perm_matrix,
     }
 
     return render(request, "accounts/role_management.html", context)

@@ -1,0 +1,57 @@
+{% extends "external_sales/base_dept.html" %}
+
+{% block breadcrumbs %}
+<li class="breadcrumb-item active">المبيعات الخارجية</li>
+{% endblock %}
+
+{% block dept_content %}
+<div class="dept-header mb-4">
+    <h2><i class="fas fa-handshake me-2"></i>إدارة المبيعات الخارجية</h2>
+    <div class="dept-subtitle">اختر القسم المطلوب</div>
+</div>
+
+<div class="row g-4 justify-content-center">
+    {# Decorator Engineers Department #}
+    <div class="col-md-6 col-lg-4">
+        <a href="{% url 'external_sales:decorator_dashboard' %}" class="text-decoration-none">
+            <div class="card border-0 shadow-sm h-100 text-center p-4" style="border-radius:16px; transition: transform .2s;">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <i class="fas fa-drafting-compass fa-3x" style="color:#1a237e;"></i>
+                    </div>
+                    <h4 class="fw-bold mb-2" style="color:#1a237e;">مهندسو الديكور</h4>
+                    <p class="text-muted mb-0">إدارة مهندسي الديكور الخارجيين والعمولات وربط العملاء والطلبات</p>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    {# Wholesale (Coming Soon) #}
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100 text-center p-4" style="border-radius:16px; opacity:.6;">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="fas fa-boxes fa-3x text-secondary"></i>
+                </div>
+                <h4 class="fw-bold mb-2 text-secondary">البيع بالجملة</h4>
+                <p class="text-muted mb-3">قريباً</p>
+                <span class="badge bg-secondary">قيد التطوير</span>
+            </div>
+        </div>
+    </div>
+
+    {# Projects (Coming Soon) #}
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100 text-center p-4" style="border-radius:16px; opacity:.6;">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="fas fa-project-diagram fa-3x text-secondary"></i>
+                </div>
+                <h4 class="fw-bold mb-2 text-secondary">المشاريع</h4>
+                <p class="text-muted mb-3">قريباً</p>
+                <span class="badge bg-secondary">قيد التطوير</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

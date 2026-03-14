@@ -16,6 +16,79 @@ _HIDDEN_NAVBAR_URLS = {
     "/inventory/transfers/",   # تحويلات مخزنية — أُزيلت بطلب المدير
 }
 
+# خريطة مسارات URL → الأدوار المطلوبة (أحد المذكورين يكفي)
+# إذا لم يكن المسار هنا أو المستخدم staff/superuser: يُمرَّر بدون قيد
+_URL_ROLE_MAP = {
+    "/customers/": ["is_salesperson", "is_branch_manager", "is_region_manager", "is_sales_manager", "is_external_sales_director", "is_decorator_dept_manager", "is_decorator_dept_staff"],
+    "/orders/": ["is_salesperson", "is_branch_manager", "is_region_manager", "is_sales_manager", "is_external_sales_director", "is_decorator_dept_manager", "is_decorator_dept_staff"],
+    "/inventory/": ["is_warehouse_staff", "is_sales_manager", "is_branch_manager"],
+    "/inspections/": ["is_inspection_technician", "is_inspection_manager"],
+    "/installations/": ["is_installation_manager", "is_traffic_manager"],
+    "/manufacturing/": ["is_factory_manager", "is_factory_accountant", "is_factory_receiver"],
+    "/cutting/": ["is_factory_manager", "is_factory_accountant"],
+    "/complaints/": ["is_salesperson", "is_branch_manager", "is_sales_manager"],
+    "/reports/": ["is_sales_manager", "is_branch_manager", "is_region_manager"],
+    "/accounting/": ["is_sales_manager"],
+    "/factory-accounting/": ["is_factory_accountant", "is_factory_manager"],
+    "/external-sales/": ["is_external_sales_director", "is_decorator_dept_manager", "is_decorator_dept_staff"],
+    "/database/": ["is_sales_manager", "is_region_manager"],
+}
+
+
+# خريطة المسار → صلاحيات Django المرتبطة (codename)
+# إذا المستخدم يملك أي صلاحية django مرتبطة بالقسم، يُسمح له
+_URL_DJANGO_PERM_MAP = {
+    "/customers/": ["view_customer", "add_customer", "change_customer"],
+    "/orders/": ["view_order", "add_order", "change_order"],
+    "/inventory/": ["view_product", "change_product", "view_warehouse"],
+    "/inspections/": ["view_inspection", "add_inspection", "change_inspection"],
+    "/installations/": ["view_installation", "change_installation"],
+    "/manufacturing/": ["view_manufacturingorder", "change_manufacturingorder", "can_approve_orders"],
+    "/cutting/": ["view_cuttingorder", "change_cuttingorder"],
+    "/complaints/": ["view_complaint", "add_complaint"],
+    "/reports/": ["view_order", "view_customer"],
+    "/accounting/": ["view_transaction", "view_account"],
+    "/factory-accounting/": ["view_tailorpayment", "view_cutterpayment"],
+    "/external-sales/": ["view_decoratorprofile", "change_decoratorprofile"],
+    "/database/": ["change_user", "view_user"],
+}
+
+
+def _is_url_restricted(user, url_name):
+    """هل المستخدم محدود الصلاحية لهذا المسار؟"""
+    if not url_name or user.is_superuser or user.is_staff:
+        return False
+    for prefix, roles in _URL_ROLE_MAP.items():
+        if url_name.startswith(prefix):
+            # 1) فحص الحقول البولينية (الأدوار الأساسية)
+            if any(getattr(user, r, False) for r in roles):
+                return False
+            # 2) فحص أدوار UserRole M2M
+            if hasattr(user, "user_roles"):
+                for ur in getattr(user, "_prefetched_user_roles", []) or []:
+                    role_key = ur.role.name
+                    if role_key in roles or f"is_{role_key}" in roles:
+                        return False
+                # fallback: DB query
+                if user.pk:
+                    mapped_keys = [r.replace("is_", "") for r in roles]
+                    if user.user_roles.filter(role__name__in=mapped_keys).exists():
+                        return False
+            # 3) فحص صلاحيات Django الفردية / المجموعات
+            django_perms = _URL_DJANGO_PERM_MAP.get(prefix, [])
+            for perm_codename in django_perms:
+                if user.has_perm(f"accounts.{perm_codename}") or user.has_perm(perm_codename):
+                    return False
+                # Try with common app labels
+                for app in ["customers", "orders", "inventory", "inspections",
+                            "installations", "manufacturing", "cutting",
+                            "complaints", "accounting", "factory_accounting",
+                            "external_sales"]:
+                    if user.has_perm(f"{app}.{perm_codename}"):
+                        return False
+            return True
+    return False
+
 
 def navbar_departments(request):
     """
@@ -95,6 +168,12 @@ def navbar_departments(request):
             "url": None,
             "units": [],
         },
+        "external_sales": {
+            "name": "المبيعات الخارجية",
+            "icon": "fa-handshake",
+            "url": None,
+            "units": [],
+        },
         "database": {
             "name": "إدارة البيانات",
             "icon": "fa-database",
@@ -114,6 +193,7 @@ def navbar_departments(request):
                 "name": unit.name,
                 "icon": unit.icon,
                 "url_name": unit.url_name,
+                "disabled": unit.url_name in (None, "", "#"),
             }
 
             # تحديد أي عنصر navbar يجب أن تظهر فيه هذه الوحدة
@@ -137,19 +217,25 @@ def navbar_departments(request):
                 navbar_items["accounting"]["units"].append(unit_dict)
             if unit.show_database and "database" in navbar_items:
                 navbar_items["database"]["units"].append(unit_dict)
+            if unit.show_external_sales and "external_sales" in navbar_items:
+                navbar_items["external_sales"]["units"].append(unit_dict)
     else:
-        # المستخدمون العاديون يرون فقط وحدات أقسامهم
-        user_dept_ids = user_departments.values_list("id", "parent_id")
-        user_dept_ids_flat = set()
-        for dept_id, parent_id in user_dept_ids:
-            user_dept_ids_flat.add(dept_id)
-            if parent_id:
-                user_dept_ids_flat.add(parent_id)
+        # المستخدمون العاديون — صلاحيات على مستوى الصفحة
+        # Root مُعيَّن مباشرة → كل أبنائه ظاهرون
+        # Child مُعيَّن بلا root → هذا الـ Child فقط ظاهر
+        direct_root_ids = set()
+        direct_child_ids = set()
+        for dept_id, parent_id in user_departments.values_list("id", "parent_id"):
+            if parent_id is None:
+                direct_root_ids.add(dept_id)
+            else:
+                direct_child_ids.add(dept_id)
 
         for unit in all_units:
-            # التحقق من أن المستخدم ينتمي لهذا القسم
+            # التحقق: root مُعيَّن أو child مُعيَّن مباشرة
             is_authorized = (
-                unit.id in user_dept_ids_flat or unit.parent_id in user_dept_ids_flat
+                unit.parent_id in direct_root_ids
+                or unit.id in direct_child_ids
             )
 
             # صلاحيات خاصة لمدير التركيبات لرؤية أقسام التركيبات والمصنع
@@ -165,11 +251,14 @@ def navbar_departments(request):
                 # تخطي الروابط المحظورة بشكل دائم
                 if unit.url_name in _HIDDEN_NAVBAR_URLS:
                     continue
-                # تحويل الوحدة إلى dictionary
+                # تحويل الوحدة إلى dictionary — مع تحقق الصلاحية
+                restricted = _is_url_restricted(user, unit.url_name)
                 unit_dict = {
                     "name": unit.name,
                     "icon": unit.icon,
                     "url_name": unit.url_name,
+                    "restricted": restricted,
+                    "disabled": unit.url_name in (None, "", "#"),
                 }
 
                 if unit.show_customers and "customers" in navbar_items:
@@ -192,6 +281,8 @@ def navbar_departments(request):
                     navbar_items["accounting"]["units"].append(unit_dict)
                 if unit.show_database and "database" in navbar_items:
                     navbar_items["database"]["units"].append(unit_dict)
+                if unit.show_external_sales and "external_sales" in navbar_items:
+                    navbar_items["external_sales"]["units"].append(unit_dict)
 
     # Inject Traffic Management for authorized users
     if (
@@ -270,6 +361,69 @@ def navbar_departments(request):
                 "icon": "fa-trophy",
                 "url_name": "/reports/ranking/",
             }
+        )
+
+    # Inject External Sales — فقط إذا لم تأتي من الأقسام في قاعدة البيانات
+    if (
+        not navbar_items.get("external_sales", {}).get("units")
+        and (
+            user.is_superuser
+            or getattr(user, "is_external_sales_director", False)
+            or getattr(user, "is_decorator_dept_manager", False)
+            or getattr(user, "is_decorator_dept_staff", False)
+        )
+        and "external_sales" in navbar_items
+    ):
+        navbar_items["external_sales"]["units"].extend(
+            [
+                {
+                    "name": "مهندسين الديكور",
+                    "icon": "fa-paint-brush",
+                    "url_name": "/external-sales/decorator/",
+                },
+                {
+                    "name": "البيع بالجملة (قريباً)",
+                    "icon": "fa-boxes",
+                    "url_name": "#",
+                    "disabled": True,
+                },
+                {
+                    "name": "المشاريع (قريباً)",
+                    "icon": "fa-project-diagram",
+                    "url_name": "#",
+                    "disabled": True,
+                },
+            ]
+        )
+
+    # Inject User & Role Management for managers/superusers
+    can_manage = (
+        user.is_superuser
+        or getattr(user, "is_sales_manager", False)
+        or getattr(user, "is_region_manager", False)
+    )
+    if can_manage:
+        # Create a "settings" section if needed or add to database
+        if "database" not in navbar_items:
+            navbar_items["database"] = {
+                "name": "إدارة البيانات",
+                "icon": "fa-database",
+                "url": "/database/",
+                "units": [],
+            }
+        navbar_items["database"]["units"].extend(
+            [
+                {
+                    "name": "إدارة المستخدمين",
+                    "icon": "fa-users-cog",
+                    "url_name": "/accounts/manage/users/",
+                },
+                {
+                    "name": "لوحة الأدوار",
+                    "icon": "fa-user-shield",
+                    "url_name": "/accounts/roles/",
+                },
+            ]
         )
 
     # إزالة العناصر الفارغة

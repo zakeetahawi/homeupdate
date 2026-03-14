@@ -1,0 +1,404 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}تعديل {{ user_obj.get_full_name|default:user_obj.username }}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'accounts/manage/css/user_management.css' %}">
+{% endblock %}
+{% block content %}
+<div class="container-fluid py-3">
+    <!-- العنوان -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'accounts:user_manage_list' %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-right"></i></a>
+            <div>
+                <h4 class="mb-0">
+                    {% if user_obj.image %}
+                    <img src="{{ user_obj.image.url }}" class="user-avatar-lg me-2" alt="">
+                    {% endif %}
+                    {{ user_obj.get_full_name|default:user_obj.username }}
+                </h4>
+                <small class="text-muted">
+                    @{{ user_obj.username }}
+                    {% if user_obj.is_superuser %}<span class="badge bg-danger ms-1" style="font-size:10px">سوبر يوزر</span>{% endif %}
+                    {% if user_obj.is_staff %}<span class="badge bg-dark ms-1" style="font-size:10px">Staff</span>{% endif %}
+                </small>
+            </div>
+        </div>
+        <div id="roles-summary-container">
+            <span class="badge bg-primary px-3 py-2" id="roles-summary" style="font-size:12px">{{ user_obj.get_active_roles_display }}</span>
+        </div>
+    </div>
+
+    {% if messages %}
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2 mb-2" role="alert">
+        {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <form method="post" id="user-edit-form">
+        {% csrf_token %}
+        <div class="row g-3">
+            <!-- العمود الأيسر: البيانات + الأدوار -->
+            <div class="col-lg-8">
+                <!-- البيانات الأساسية -->
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white border-bottom">
+                        <h6 class="mb-0"><i class="fas fa-user me-2 text-primary"></i>البيانات الأساسية</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">الاسم الأول</label>
+                                <input type="text" name="first_name" value="{{ user_obj.first_name }}" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">اسم العائلة</label>
+                                <input type="text" name="last_name" value="{{ user_obj.last_name }}" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">البريد الإلكتروني</label>
+                                <input type="email" name="email" value="{{ user_obj.email }}" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">الهاتف</label>
+                                <input type="text" name="phone" value="{{ user_obj.phone|default:"" }}" class="form-control form-control-sm" dir="ltr">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">الفرع</label>
+                                <select name="branch" class="form-select form-select-sm">
+                                    <option value="">— بدون فرع —</option>
+                                    {% for branch in branches %}
+                                    <option value="{{ branch.id }}" {% if user_obj.branch_id == branch.id %}selected{% endif %}>{{ branch.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold">اسم المستخدم</label>
+                                <input type="text" value="{{ user_obj.username }}" class="form-control form-control-sm bg-light" disabled dir="ltr">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- أقسام الأدوار — كل قسم بلون مميز -->
+                {% for section_key, section in role_sections.items %}
+                <div class="card border-0 shadow-sm mb-3 role-section" data-section="{{ section_key }}">
+                    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="fas {{ section.icon }} me-2 section-icon-{{ section_key }}"></i>{{ section.label }}
+                        </h6>
+                        {% if section.has_active %}
+                        <span class="badge section-badge-{{ section_key }}" id="badge-{{ section_key }}">
+                            {{ section.roles|length }} دور
+                        </span>
+                        {% else %}
+                        <span class="badge bg-light text-muted" id="badge-{{ section_key }}">غير مفعّل</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        <div class="role-chips-container">
+                            {% for field_name, display_name, is_active in section.roles %}
+                            <label class="role-chip {% if is_active %}role-chip-active{% endif %}"
+                                   data-field="{{ field_name }}" data-section="{{ section_key }}"
+                                   data-display="{{ display_name }}" tabindex="0">
+                                <input type="checkbox" name="{{ field_name }}" {% if is_active %}checked{% endif %}
+                                       class="d-none role-checkbox"
+                                       data-toggle-url="{% url 'accounts:user_toggle_role_api' user_obj.pk %}">
+                                <span class="role-chip-indicator {% if is_active %}active{% endif %}">
+                                    <i class="fas {% if is_active %}fa-check{% else %}fa-plus{% endif %}"></i>
+                                </span>
+                                <span class="role-chip-label">{{ display_name }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+
+                        {% if section_key == "warehouse" %}
+                        <!-- حقول المستودع -->
+                        <div class="conditional-fields mt-3 pt-3 border-top warehouse-fields" {% if not user_obj.is_warehouse_staff %}style="display:none"{% endif %}>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">المستودع الرئيسي (FK)</label>
+                                    <select name="assigned_warehouse" class="form-select form-select-sm">
+                                        <option value="">— اختر —</option>
+                                        {% for wh in all_warehouses %}
+                                        <option value="{{ wh.id }}" {% if user_obj.assigned_warehouse_id == wh.id %}selected{% endif %}>{{ wh.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">مستودعات إضافية (M2M)</label>
+                                    <select name="assigned_warehouses" multiple class="form-select form-select-sm" size="3">
+                                        {% for wh in all_warehouses %}
+                                        <option value="{{ wh.id }}" {% if wh.id in assigned_warehouse_ids %}selected{% endif %}>{{ wh.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if section_key == "sales" %}
+                        <!-- فروع مُدارة (لمدير المنطقة) -->
+                        <div class="conditional-fields mt-3 pt-3 border-top managed-branches-field" {% if not user_obj.is_region_manager %}style="display:none"{% endif %}>
+                            <label class="form-label small fw-bold"><i class="fas fa-sitemap me-1"></i>الفروع المُدارة (مدير منطقة)</label>
+                            <select name="managed_branches" multiple class="form-select form-select-sm" size="4">
+                                {% for branch in branches %}
+                                <option value="{{ branch.id }}" {% if branch.id in managed_branch_ids %}selected{% endif %}>{{ branch.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">اضغط Ctrl/Cmd لاختيار أكثر من فرع</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- أقسام المشروع (Departments) -->
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-building me-2 text-info"></i>أقسام المشروع (الناف بار)</h6>
+                        <span class="badge bg-info" id="dept-count">{{ user_obj.departments.count }}</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="small text-muted mb-3">
+                            <i class="fas fa-info-circle me-1"></i>
+                            انقر مرتان على القسم أو السهم لعرض صفحاته الداخلية. تحديد صفحات معيّنة يعطي صلاحية على مستوى الصفحة فقط.
+                        </p>
+                        <div class="row g-3">
+                            {% for sec in department_sections %}
+                            <div class="col-md-6">
+                                <div class="dept-group border rounded p-2" data-dept-id="{{ sec.root.id }}">
+                                    <div class="d-flex align-items-center justify-content-between mb-0 dept-header" data-root="{{ sec.root.id }}">
+                                        <label class="form-check d-flex align-items-center gap-2 mb-0 fw-bold" onclick="event.stopPropagation()">
+                                            <input type="checkbox" name="departments" value="{{ sec.root.id }}"
+                                                   class="form-check-input dept-root-cb" data-root="{{ sec.root.id }}"
+                                                   {% if sec.root.id in user_department_ids %}checked{% endif %}>
+                                            <i class="fas {{ sec.icon }} dept-icon"></i>
+                                            <span class="small">{{ sec.root.name }}</span>
+                                        </label>
+                                        <div class="d-flex align-items-center gap-1">
+                                            {% if sec.assigned_count %}
+                                            <span class="badge bg-info" style="font-size:10px">{{ sec.assigned_count }}</span>
+                                            {% endif %}
+                                            {% if sec.children %}
+                                            <i class="fas fa-chevron-down dept-chevron text-muted" style="font-size:10px;transition:transform .2s;cursor:pointer"></i>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if sec.children %}
+                                    <div class="dept-children pe-3 dept-pages-panel" data-root="{{ sec.root.id }}" style="display:none;border-right:2px solid #e9ecef;margin-top:8px">
+                                        <div class="small text-muted mb-1 fw-bold" style="font-size:10px"><i class="fas fa-file-alt me-1"></i>الصفحات الداخلية:</div>
+                                        {% for child in sec.children %}
+                                        <label class="form-check d-flex align-items-center gap-2 mb-1 dept-child-label" data-root="{{ sec.root.id }}">
+                                            <input type="checkbox" name="departments" value="{{ child.id }}"
+                                                   class="form-check-input form-check-input-sm dept-child-cb"
+                                                   data-root="{{ sec.root.id }}"
+                                                   {% if child.id in user_department_ids %}checked{% endif %}>
+                                            <i class="fas {{ child.icon|default:'fa-angle-left' }} text-muted" style="font-size:11px"></i>
+                                            <span class="small">{{ child.name }}</span>
+                                        </label>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- صلاحيات إضافية -->
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white border-bottom">
+                        <h6 class="mb-0"><i class="fas fa-key me-2 text-warning"></i>صلاحيات إضافية</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" name="can_export" id="can_export" class="form-check-input" {% if user_obj.can_export %}checked{% endif %}>
+                                    <label for="can_export" class="form-check-label small"><i class="fas fa-file-excel me-1 text-success"></i>تصدير Excel</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" name="can_edit_price" id="can_edit_price" class="form-check-input" {% if user_obj.can_edit_price %}checked{% endif %}>
+                                    <label for="can_edit_price" class="form-check-label small"><i class="fas fa-tag me-1 text-info"></i>تعديل الأسعار</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" name="can_apply_administrative_discount" id="can_apply_administrative_discount" class="form-check-input" {% if user_obj.can_apply_administrative_discount %}checked{% endif %}>
+                                    <label for="can_apply_administrative_discount" class="form-check-label small"><i class="fas fa-percent me-1 text-danger"></i>خصم إداري</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" name="is_wholesale" id="is_wholesale" class="form-check-input" {% if user_obj.is_wholesale %}checked{% endif %}>
+                                    <label for="is_wholesale" class="form-check-label small"><i class="fas fa-boxes me-1 text-primary"></i>جملة</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" name="is_retail" id="is_retail" class="form-check-input" {% if user_obj.is_retail %}checked{% endif %}>
+                                    <label for="is_retail" class="form-check-label small"><i class="fas fa-store me-1 text-secondary"></i>تجزئة</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- صلاحيات Django الفردية -->
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-user-shield me-2 text-purple"></i>صلاحيات Django الفردية</h6>
+                        <span class="badge bg-success" id="direct-perms-count">{{ user_direct_perm_ids|length }}</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="small text-muted mb-2">
+                            <i class="fas fa-info-circle me-1"></i>
+                            اختر صلاحيات Django مباشرة للمستخدم (مستقلة عن الأدوار). استخدم البحث للتصفية.
+                        </p>
+                        <div class="mb-3">
+                            <input type="text" id="perm-search-input" class="form-control form-control-sm"
+                                   placeholder="🔍 ابحث عن صلاحية..." autocomplete="off">
+                        </div>
+                        <div style="max-height:400px; overflow-y:auto;" id="django-perms-container">
+                            {% for app_key, app_data in django_permissions_grouped.items %}
+                            <div class="perm-app-group mb-2" data-app="{{ app_key }}">
+                                <div class="d-flex align-items-center gap-2 perm-app-header rounded px-2 py-1" style="cursor:pointer;user-select:none" data-app="{{ app_key }}">
+                                    <i class="fas fa-chevron-left perm-app-chevron" style="font-size:10px;transition:transform .2s"></i>
+                                    <span class="fw-bold small flex-grow-1">{{ app_data.label }}</span>
+                                    <span class="badge bg-light text-dark" style="font-size:10px">{{ app_data.permissions|length }}</span>
+                                </div>
+                                <div class="perm-app-body pe-3" style="display:none;border-right:2px solid #e9ecef;margin-right:8px">
+                                    {% for p in app_data.permissions %}
+                                    <label class="form-check d-flex align-items-center gap-2 mb-1 perm-item" data-codename="{{ p.codename }}" data-name="{{ p.name }}" data-full="{{ p.full }}">
+                                        <input type="checkbox" name="user_permissions" value="{{ p.id }}"
+                                               class="form-check-input form-check-input-sm django-perm-cb"
+                                               {% if p.id in user_direct_perm_ids %}checked{% endif %}>
+                                        <div>
+                                            <code class="small" style="font-size:11px">{{ p.codename }}</code>
+                                            <br><small class="text-muted" style="font-size:10px">{{ p.name }}</small>
+                                        </div>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mb-3">
+                    <button type="submit" class="btn btn-primary px-4"><i class="fas fa-save me-1"></i>حفظ كل التعديلات</button>
+                    <a href="{% url 'accounts:user_manage_list' %}" class="btn btn-outline-secondary">إلغاء</a>
+                </div>
+            </div>
+
+            <!-- العمود الأيمن: الملخص + الصلاحيات -->
+            <div class="col-lg-4">
+                <!-- ملخص المعلومات -->
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white border-bottom">
+                        <h6 class="mb-0"><i class="fas fa-info-circle me-2 text-info"></i>معلومات سريعة</h6>
+                    </div>
+                    <div class="card-body small">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">تاريخ الانضمام:</span>
+                            <span>{{ user_obj.date_joined|date:"Y/m/d" }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">آخر دخول:</span>
+                            <span>{{ user_obj.last_login|date:"Y/m/d H:i"|default:"لم يدخل" }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">الدور الأساسي:</span>
+                            <span class="fw-bold" id="primary-role">{{ user_obj.get_user_role_display }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">المستوى:</span>
+                            <span class="badge bg-secondary" id="role-level">{{ user_obj.get_role_level }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- الصلاحيات الفعلية -->
+                <div class="card border-0 shadow-sm sticky-top" style="top:80px" id="permissions-panel">
+                    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-shield-alt me-2 text-success"></i>الصلاحيات الفعلية</h6>
+                        <div>
+                            <span class="badge bg-primary" id="perms-count">{{ all_permissions|length }}</span>
+                            <button type="button" class="btn btn-sm btn-link p-0 ms-1" id="refresh-perms-btn" title="تحديث">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0" style="max-height:55vh; overflow-y:auto;">
+                        <div id="perms-loading" class="text-center py-3" style="display:none">
+                            <div class="spinner-border spinner-border-sm text-primary"></div>
+                            <span class="small text-muted ms-1">جاري التحديث...</span>
+                        </div>
+                        <table class="table table-sm table-borderless mb-0" id="perms-table">
+                            <tbody id="perms-table-body">
+                                {% for p in permissions_with_source %}
+                                <tr>
+                                    <td class="px-3 py-1">
+                                        <div class="d-flex align-items-start gap-2">
+                                            {% if p.type == 'direct' %}
+                                            <i class="fas fa-check-circle text-success mt-1" style="font-size:11px"></i>
+                                            {% elif p.type == 'inherited' %}
+                                            <i class="fas fa-arrow-circle-down text-muted mt-1" style="font-size:11px"></i>
+                                            {% elif p.type == 'role_model' %}
+                                            <i class="fas fa-user-shield text-info mt-1" style="font-size:11px"></i>
+                                            {% elif p.type == 'django_perm' %}
+                                            <i class="fas fa-key text-warning mt-1" style="font-size:11px"></i>
+                                            {% elif p.type == 'group' %}
+                                            <i class="fas fa-users text-primary mt-1" style="font-size:11px"></i>
+                                            {% else %}
+                                            <i class="fas fa-check-circle text-success mt-1" style="font-size:11px"></i>
+                                            {% endif %}
+                                            <div>
+                                                <code class="perm-code">{{ p.permission }}</code>
+                                                <br>
+                                                <small class="{% if p.type == 'direct' %}text-success{% elif p.type == 'django_perm' %}text-warning{% elif p.type == 'role_model' %}text-info{% elif p.type == 'group' %}text-primary{% else %}text-muted{% endif %}">
+                                                    {{ p.source }}
+                                                    {% if p.type == 'inherited' %}(موروث){% endif %}
+                                                    {% if p.type == 'django_perm' %}(فردية){% endif %}
+                                                    {% if p.type == 'group' %}(مجموعة){% endif %}
+                                                    {% if p.type == 'role_model' %}(دور DB){% endif %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr id="no-perms-row"><td class="text-center text-muted py-4">
+                                    <i class="fas fa-lock fa-2x mb-2 d-block"></i>
+                                    لا توجد صلاحيات — فعّل دوراً أولاً
+                                </td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'accounts/manage/js/user_management.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initUserManagement({
+        toggleUrl: "{% url 'accounts:user_toggle_role_api' user_obj.pk %}",
+        permissionsUrl: "{% url 'accounts:user_permissions_api' user_obj.pk %}",
+        csrfToken: "{{ csrf_token }}"
+    });
+});
+</script>
+{% endblock %}

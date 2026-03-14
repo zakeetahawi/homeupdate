@@ -1,0 +1,82 @@
+{% extends "external_sales/base_dept.html" %}
+{% load static %}
+
+{% block breadcrumbs %}
+<li class="breadcrumb-item"><a href="{% url 'external_sales:index' %}">المبيعات الخارجية</a></li>
+<li class="breadcrumb-item"><a href="{% url 'external_sales:decorator_dashboard' %}">مهندسو الديكور</a></li>
+<li class="breadcrumb-item active">الطلبات المرتبطة</li>
+{% endblock %}
+
+{% block dept_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="fas fa-shopping-cart me-2"></i>طلبات مهندسي الديكور</h4>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        {% if linked_orders %}
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>رقم الطلب</th>
+                        <th>المهندس</th>
+                        <th>عميل الطلب</th>
+                        <th>التاريخ</th>
+                        <th>الإجمالي</th>
+                        <th>العمولة</th>
+                        <th>الحالة</th>
+                        <th>تاريخ الربط</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lo in linked_orders %}
+                    <tr>
+                        <td><a href="{% url 'orders:order_detail_by_number' lo.order.order_number %}" class="fw-bold text-decoration-none" target="_blank">{{ lo.order.order_number }}</a></td>
+                        <td>
+                            <a href="{% url 'external_sales:engineer_detail' lo.engineer.pk %}">
+                                {{ lo.engineer.customer.name }}
+                                <small class="text-muted">({{ lo.engineer.designer_code }})</small>
+                            </a>
+                        </td>
+                        <td>{{ lo.order.customer.name|default:"-" }}</td>
+                        <td>{{ lo.order.order_date|date:"Y-m-d" }}</td>
+                        <td>{{ lo.order.total_amount|floatformat:2 }}</td>
+                        <td>{{ lo.commission_value|floatformat:2 }} <small class="text-muted">({{ lo.commission_rate }}%)</small></td>
+                        <td><span class="badge status-badge-{{ lo.commission_status }}">{{ lo.get_commission_status_display }}</span></td>
+                        <td>{{ lo.linked_at|date:"Y-m-d" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if is_paginated %}
+        <nav class="d-flex justify-content-center py-3">
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>
+                {% endif %}
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                    <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                    {% endif %}
+                {% endfor %}
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center text-muted py-5">
+            <i class="fas fa-shopping-cart fa-3x mb-3 d-block"></i>
+            <h5>لا توجد طلبات مرتبطة بمهندسي الديكور</h5>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

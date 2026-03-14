@@ -20,9 +20,15 @@
             {% if item.units|length == 1 and not item.url and key != 'reports' %}
                 {# عنصر واحد فقط - عرض مباشر بدون dropdown #}
                 <li class="nav-item">
+                    {% if item.units.0.restricted %}
+                    <a class="nav-link text-muted nav-restricted" href="#" onclick="event.preventDefault();alert('⛔ ليس لديك صلاحية الوصول لهذا القسم. تواصل مع المدير لمنحك الصلاحية.');" title="صلاحية مقيّدة">
+                        <i class="fas fa-lock" style="font-size:10px"></i><span class="nav-text">{{ item.units.0.name }}</span>
+                    </a>
+                    {% else %}
                     <a class="nav-link" href="{{ item.units.0.url_name }}">
                         <i class="fas {{ item.units.0.icon|default:item.icon }}"></i><span class="nav-text">{{ item.units.0.name }}</span>
                     </a>
+                    {% endif %}
                 </li>
             {% else %}
                 {# عدة عناصر - عرض كـ dropdown #}
@@ -53,6 +59,23 @@
                     </a>
                     <ul class="dropdown-menu" aria-labelledby="{{ key }}Dropdown">
                         {% for unit in item.units %}
+                            {% if unit.disabled %}
+                            <li>
+                                <span class="dropdown-item text-muted" style="opacity:.5; cursor:default;">
+                                    {% if unit.icon %}<i class="fas {{ unit.icon }}"></i>{% endif %}
+                                    {{ unit.name }}
+                                </span>
+                            </li>
+                            {% elif unit.restricted %}
+                            <li>
+                                <a class="dropdown-item text-muted nav-restricted" href="#"
+                                   onclick="event.preventDefault();alert('⛔ ليس لديك صلاحية الوصول لـ «{{ unit.name }}». تواصل مع المدير لمنحك الصلاحية.');"
+                                   title="صلاحية مقيّدة">
+                                    <i class="fas fa-lock" style="font-size:10px"></i>
+                                    {{ unit.name }}
+                                </a>
+                            </li>
+                            {% else %}
                             <li>
                                 <a class="dropdown-item"
                                    href="{{ unit.url_name }}{% if 'cutting' in unit.url_name %}?needs_fix=true{% endif %}">
@@ -60,6 +83,7 @@
                                     {{ unit.name }}
                                 </a>
                             </li>
+                            {% endif %}
                             {% if not forloop.last and forloop.counter|divisibleby:3 %}
                                 <li>
                                     <hr class="dropdown-divider">
