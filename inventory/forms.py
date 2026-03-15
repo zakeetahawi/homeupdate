@@ -433,12 +433,11 @@ class ProductForm(forms.ModelForm):
                 del self.fields["warehouse"]
             if "initial_quantity" in self.fields:
                 del self.fields["initial_quantity"]
-            # إزالة حقول السعر - يُدار من نظام المتغيرات فقط (لإصدار الإضافة الجديد)
-            # ولكن نبقيها للقراءة فقط إذا كانت موجودة (سيتم التعامل معها في القالب)
+            # إزالة حقول السعر - يُدار من نظام المتغيرات فقط
             if "price" in self.fields:
-                self.fields["price"].required = False
+                del self.fields["price"]
             if "wholesale_price" in self.fields:
-                self.fields["wholesale_price"].required = False
+                del self.fields["wholesale_price"]
 
     def save(self, commit=True):
         instance = super().save(commit=False)

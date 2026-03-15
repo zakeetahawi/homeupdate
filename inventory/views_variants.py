@@ -3,7 +3,10 @@ Views لنظام المتغيرات والتسعير
 """
 
 import json
+import logging
 from decimal import Decimal, InvalidOperation
+
+logger = logging.getLogger(__name__)
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
@@ -645,6 +648,22 @@ def global_bulk_price_update(request):
                 )
             if history_list:
                 PriceHistory.objects.bulk_create(history_list, batch_size=500)
+
+            # مزامنة الأسعار مع المنتجات القديمة (bulk_update لا يُطلق الإشارات)
+            synced_legacy = 0
+            for bp in bps_to_update:
+                bp_variants = bp.variants.filter(
+                    is_active=True,
+                    legacy_product__isnull=False,
+                ).select_related("legacy_product")
+                for variant in bp_variants:
+                    try:
+                        PricingService._sync_legacy_product_price(variant)
+                        synced_legacy += 1
+                    except Exception:
+                        pass
+            if synced_legacy:
+                logger.info(f"✅ تم مزامنة {synced_legacy} منتج قديم بعد التحديث الجماعي العالمي")
 
         if errors:
             messages.warning(

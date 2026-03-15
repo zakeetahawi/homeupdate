@@ -2,7 +2,7 @@ import logging
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import models, transaction
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -493,11 +493,12 @@ def sync_base_product_prices_to_legacy(sender, instance, **kwargs):
         try:
             from .variant_services import PricingService
 
-            # تحديث كل المتغيرات المرتبطة التي ليس لها سعر مخصص
+            # تحديث كل المتغيرات المرتبطة التي تعتمد على أي سعر أساسي
+            # (إما بدون تجاوز قطاعي أو بدون تجاوز جملة)
             variants = instance.variants.filter(
                 is_active=True,
-                price_override__isnull=True,
-                wholesale_price_override__isnull=True,
+            ).filter(
+                Q(price_override__isnull=True) | Q(wholesale_price_override__isnull=True)
             ).select_related("legacy_product")
 
             for variant in variants:

@@ -57,7 +57,7 @@ class ProductAdmin(SoftDeleteAdminMixin, admin.ModelAdmin):
         ("qr_code_base64", admin.EmptyFieldListFilter),
     )
     search_fields = ("name", "code", "description")
-    readonly_fields = ("get_current_stock", "created_at", "updated_at", "qr_preview")
+    readonly_fields = ("get_current_stock", "created_at", "updated_at", "qr_preview", "price", "wholesale_price")
     actions = ["regenerate_qr_codes"]
 
     fieldsets = (
