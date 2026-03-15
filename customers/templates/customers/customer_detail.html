@@ -170,20 +170,14 @@
         <div class="row">
             <!-- Customer Information -->
             <div class="col-md-4">
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">{% trans 'معلومات العميل' %}</h5>
+                <div class="card border-0 shadow-sm mb-4" style="border-radius:12px;">
+                    <div class="card-header bg-white border-bottom" style="border-radius:12px 12px 0 0;">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-id-card text-primary me-2"></i>{% trans 'معلومات العميل' %}
+                        </h5>
                     </div>
                     <div class="card-body">
-                        {% if customer.image %}
-                            <div class="text-center mb-3">
-                                <img src="{{ customer.image.url }}"
-                                     alt="{{ customer.name }}"
-                                     class="img-fluid rounded-circle"
-                                     style="max-width: 150px">
-                            </div>
-                        {% endif %}
-                        <table class="table table-sm">
+                        <table class="table table-sm table-borderless mb-0">
                             <tr>
                                 <th>{% trans 'كود العميل' %}:</th>
                                 <td>
@@ -360,10 +354,10 @@
                     </div>
                 {% endif %}
                 <!-- Customer Interests -->
-                <div class="card mb-4">
-                    <div class="card-header bg-light">
+                <div class="card border-0 shadow-sm mb-4" style="border-radius:12px;">
+                    <div class="card-header bg-white border-bottom" style="border-radius:12px 12px 0 0;">
                         <h5 class="card-title mb-0">
-                            <i class="fas fa-heart text-primary me-2"></i>
+                            <i class="fas fa-heart text-danger me-2"></i>
                             اهتمامات العميل
                         </h5>
                     </div>
@@ -377,10 +371,10 @@
                 </div>
                 <!-- Customer General Notes -->
                 {% if customer.notes %}
-                    <div class="card mb-4">
-                        <div class="card-header">
+                    <div class="card border-0 shadow-sm mb-4" style="border-radius:12px;">
+                        <div class="card-header bg-white border-bottom" style="border-radius:12px 12px 0 0;">
                             <h5 class="card-title mb-0">
-                                <i class="fas fa-sticky-note text-warning"></i> {% trans 'ملاحظات عامة' %}
+                                <i class="fas fa-sticky-note text-warning me-2"></i> {% trans 'ملاحظات عامة' %}
                             </h5>
                         </div>
                         <div class="card-body">
@@ -392,9 +386,9 @@
             <!-- Customer Details Tabs -->
             <div class="col-md-8">
                 <!-- Tab Navigation -->
-                <ul class="nav nav-tabs mb-4" id="customerTabs" role="tablist">
+                <ul class="nav nav-tabs nav-fill mb-4" id="customerTabs" role="tablist" style="border-bottom:2px solid #dee2e6;">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active"
+                        <button class="nav-link"
                                 id="notes-tab"
                                 data-bs-toggle="tab"
                                 data-bs-target="#notes"
@@ -437,11 +431,32 @@
                             {% if access_logs %}<span class="badge bg-info ms-1">{{ access_logs|length }}</span>{% endif %}
                         </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link"
+                                id="modifications-tab"
+                                data-bs-toggle="tab"
+                                data-bs-target="#modifications"
+                                type="button"
+                                role="tab">
+                            <i class="fas fa-tools me-2"></i>التعديلات
+                            {% if modification_requests %}<span class="badge bg-warning text-dark ms-1">{{ modification_requests|length }}</span>{% endif %}
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active"
+                                id="timeline-tab"
+                                data-bs-toggle="tab"
+                                data-bs-target="#timeline"
+                                type="button"
+                                role="tab">
+                            <i class="fas fa-stream me-2"></i>سجل التعاملات
+                        </button>
+                    </li>
                 </ul>
                 <!-- Tab Content -->
                 <div class="tab-content" id="customerTabsContent">
                     <!-- Notes Tab -->
-                    <div class="tab-pane fade show active" id="notes" role="tabpanel">
+                    <div class="tab-pane fade" id="notes" role="tabpanel">
                         <!-- Add Note Button -->
                         <div class="card mb-4">
                             <div class="card-header d-flex justify-content-between align-items-center">
@@ -595,33 +610,136 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Modifications Tab -->
+                    <div class="tab-pane fade" id="modifications" role="tabpanel">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-tools me-2 text-warning"></i>طلبات التعديل
+                                </h5>
+                                <small class="text-muted">{{ modification_requests|length }} طلب</small>
+                            </div>
+                            <div class="card-body p-0">
+                                {% if modification_requests %}
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover table-bordered mb-0">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>#</th>
+                                                <th>الطلب</th>
+                                                <th>نوع التعديل</th>
+                                                <th>الستائر المؤثرة</th>
+                                                <th>الحالة</th>
+                                                <th>تاريخ الطلب</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for mod in modification_requests %}
+                                            <tr>
+                                                <td class="text-muted small">{{ mod.pk }}</td>
+                                                <td>
+                                                    <a href="{% url 'installations:installation_detail' mod.installation.id %}">
+                                                        {{ mod.installation.order.order_number }}
+                                                    </a>
+                                                </td>
+                                                <td class="small">{{ mod.modification_type }}</td>
+                                                <td class="small">
+                                                    {% for item in mod.modification_items.all %}
+                                                        <span class="badge bg-secondary me-1 mb-1">
+                                                            {{ item.contract_curtain.room_name }} ({{ item.get_fabric_type_display }})
+                                                        </span>
+                                                    {% empty %}—{% endfor %}
+                                                </td>
+                                                <td>
+                                                    <span class="badge
+                                                        {% if mod.status == 'pending' %}bg-secondary
+                                                        {% elif mod.status == 'investigating' %}bg-info
+                                                        {% elif mod.status == 'approved' or mod.status == 'manufacturing' %}bg-warning text-dark
+                                                        {% elif mod.status == 'completed' %}bg-success
+                                                        {% elif mod.status == 'cancelled' %}bg-danger
+                                                        {% endif %}">
+                                                        {{ mod.get_status_display }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-muted small">{{ mod.created_at|date:"Y-m-d" }}</td>
+                                                <td>
+                                                    <a href="/installations/modification/{{ mod.id }}/" class="btn btn-sm btn-outline-warning" style="padding:0.15rem 0.5rem; font-size:0.78rem;">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="text-center py-5 text-muted">
+                                    <i class="fas fa-tools fa-3x mb-3"></i>
+                                    <h6>لا توجد طلبات تعديل لهذا العميل</h6>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Timeline / Customer Lifecycle Tab -->
+                    <div class="tab-pane fade show active" id="timeline" role="tabpanel">
+                        {% if timeline_events %}
+                        <div class="ps-2">
+                            {% for event in timeline_events %}
+                            <div class="d-flex align-items-start gap-2 py-2 {% if not forloop.last %}border-bottom{% endif %}" style="font-size:0.88rem;">
+                                <div class="flex-shrink-0 mt-1">
+                                    <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-{{ event.color }} bg-opacity-10 text-{{ event.color }}" style="width:28px; height:28px; font-size:0.7rem;">
+                                        <i class="{{ event.icon }}"></i>
+                                    </span>
+                                </div>
+                                <div class="flex-grow-1 d-flex justify-content-between align-items-center">
+                                    <div>
+                                        {% if event.url %}
+                                            <a href="{{ event.url }}" class="fw-semibold text-decoration-none">{{ event.title }}</a>
+                                        {% else %}
+                                            <span class="fw-semibold">{{ event.title }}</span>
+                                        {% endif %}
+                                        {% if event.subtitle %}<span class="text-muted small ms-2">{{ event.subtitle }}</span>{% endif %}
+                                    </div>
+                                    <small class="text-muted text-nowrap ms-3">{{ event.date|date:"Y-m-d" }}</small>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-stream fa-2x mb-2 d-block opacity-50"></i>
+                            <p class="mb-0 small">لا توجد أحداث مسجلة</p>
+                        </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
-        <!-- Orders & Inspections -->
-        <div class="row mt-4">
-            <!-- Recent Orders -->
-            <div class="col-md-6">
-                <div class="card"
-                     style="font-size: 0.93em;
-                            border-radius: 10px;
-                            box-shadow: 0 2px 6px rgba(0,0,0,0.04)">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">{% trans 'آخر الطلبات' %}</h5>
-                        <a href="{% url 'orders:order_list' %}?customer={{ customer.code }}"
-                           class="btn btn-sm btn-outline-primary">{% trans 'عرض الكل' %}</a>
+        <!-- Orders -->
+        <div class="row mt-4 justify-content-center">
+            <div class="col-lg-8 col-md-10 col-12">
+                <div class="card border-0 shadow-sm" style="font-size:0.85em; border-radius:10px;">
+                    <div class="card-header d-flex justify-content-between align-items-center bg-white border-bottom py-2" style="border-radius:10px 10px 0 0;">
+                        <h6 class="card-title mb-0" style="font-size:0.95rem;">
+                            <i class="fas fa-shopping-bag text-primary me-2"></i>{% trans 'طلبات العميل' %}
+                            {% if orders %}<span class="badge bg-primary bg-opacity-10 text-primary ms-1" style="font-size:0.75rem;">{{ orders|length }}</span>{% endif %}
+                        </h6>
+                        <a href="{% url 'orders:order_list' %}?search={{ customer.code }}"
+                           class="btn btn-sm btn-outline-primary" style="font-size:0.78rem;"><i class="fas fa-list me-1"></i>{% trans 'عرض الكل' %}</a>
                     </div>
-                    <div class="card-body" style="padding: 0.7rem 0.7rem 0.5rem 0.7rem;">
+                    <div class="card-body p-0">
                         {% if orders %}
                             <div class="table-responsive">
-                                <table class="table table-sm" id="orders-table-customer-detail">
-                                    <thead>
+                                <table class="table table-sm table-hover mb-0 align-middle" id="orders-table-customer-detail">
+                                    <thead class="table-light">
                                         <tr>
-                                            <th style="width: 60px; min-width: 60px; text-align: center;">رقم الطلب</th>
-                                            <th style="min-width: 100px; text-align: center;">التاريخ</th>
-                                            <th style="min-width: 120px; text-align: center;">النوع</th>
-                                            <th style="min-width: 120px; text-align: center;">الحالة</th>
-                                            <th style="min-width: 90px; text-align: center;">القيمة</th>
+                                            <th style="width:70px; text-align:center;">رقم الطلب</th>
+                                            <th style="min-width:100px; text-align:center;">التاريخ</th>
+                                            <th style="min-width:120px; text-align:center;">النوع</th>
+                                            <th style="min-width:120px; text-align:center;">الحالة</th>
+                                            <th style="min-width:90px; text-align:center;">القيمة</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -708,62 +826,17 @@
                                                 <td style="white-space: nowrap;
                                                            max-width: 90px;
                                                            text-align: center;
-                                                           font-weight: 600">{{ order.total|default:'-'|en }}</td>
+                                                           font-weight: 600">{{ order.total_amount|floatformat:0|default:'-'|en }}</td>
                                             </tr>
                                         {% endfor %}
                                     </tbody>
                                 </table>
                             </div>
                         {% else %}
-                            <p class="text-muted">{% trans 'لا توجد طلبات' %}</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            <!-- Recent Inspections -->
-            <div class="col-md-6">
-                <div class="card"
-                     style="font-size: 0.93em;
-                            border-radius: 10px;
-                            box-shadow: 0 2px 6px rgba(0,0,0,0.04)">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">{% trans 'آخر المعاينات' %}</h5>
-                        <a href="{% url 'inspections:inspection_list' %}?q={{ customer.code }}"
-                           class="btn btn-sm btn-outline-success">{% trans 'عرض الكل' %}</a>
-                    </div>
-                    <div class="card-body" style="padding: 0.7rem 0.7rem 0.5rem 0.7rem;">
-                        {% if inspections %}
-                            <div class="table-responsive">
-                                <table class="table table-sm" id="inspections-table-customer-detail">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 80px; min-width: 80px; text-align: center;">كود المعاينة</th>
-                                            <th style="min-width: 100px; text-align: center;">التاريخ</th>
-                                            <th style="min-width: 120px; text-align: center;">الحالة</th>
-                                            <th style="min-width: 100px; text-align: center;">الموعد</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for inspection in inspections %}
-                                            <tr onclick="window.location.href='{% url 'inspections:inspection_detail_by_code' inspection_code=inspection.inspection_code %}'"
-                                                style="cursor: pointer">
-                                                <td style="text-align: center;">{{ inspection.inspection_code|default:"--" }}</td>
-                                                <td style="text-align: center;">{{ inspection.created_at|date:"Y-m-d" }}</td>
-                                                <td style="text-align: center;">{% get_status_badge inspection.status "inspection" %}</td>
-                                                <td style="text-align: center;">
-                                                    {% if inspection.scheduled_date %}
-                                                        {{ inspection.scheduled_date|date:"Y-m-d" }}
-                                                    {% else %}
-                                                        --
-                                                    {% endif %}
-                                                </td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+                            <div class="text-center py-4 text-muted">
+                                <i class="fas fa-shopping-bag fa-2x mb-2 d-block opacity-50"></i>
+                                <p class="mb-0">{% trans 'لا توجد طلبات' %}</p>
                             </div>
-                        {% else %}
-                            <p class="text-muted">{% trans 'لا توجد معاينات' %}</p>
                         {% endif %}
                     </div>
                 </div>
@@ -858,7 +931,7 @@
     }
 
     .card-header {
-        border-bottom: 2px solid var(--primary);
+        border-bottom: 2px solid #e9ecef;
     }
 
     .card-title {
@@ -872,7 +945,34 @@
     }
 
     .text-muted {
-        font-style: italic;
+        font-style: normal;
+    }
+
+    /* Tabs styling */
+    #customerTabs .nav-link {
+        color: #6c757d;
+        font-weight: 500;
+        padding: 0.6rem 0.8rem;
+        border: none;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s ease;
+    }
+    #customerTabs .nav-link:hover {
+        color: #0d6efd;
+        border-bottom-color: #0d6efd40;
+    }
+    #customerTabs .nav-link.active {
+        color: #0d6efd;
+        border-bottom-color: #0d6efd;
+        background: transparent;
+    }
+
+    /* Orders table */
+    #orders-table-customer-detail tbody tr {
+        transition: background-color 0.15s ease;
+    }
+    #orders-table-customer-detail tbody tr:hover {
+        background-color: #f8f9fa;
     }
 
     .cross-branch-customer-detail {

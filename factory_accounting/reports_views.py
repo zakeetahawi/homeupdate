@@ -58,6 +58,7 @@ def production_reports(request):
         "manufacturing_order__production_line",  # Optimization for cutter name
         "manufacturing_order__order",
         "manufacturing_order__order__customer",
+        "manufacturing_order__modification_request__tailor",  # Tailor for modification orders
     ).prefetch_related("splits__tailor")
 
     # Exclude cards without production date (old/incomplete records)
@@ -65,9 +66,6 @@ def production_reports(request):
 
     # Exclude Accessories Line (ID 4)
     cards = cards.exclude(manufacturing_order__production_line_id=4)
-
-    # Exclude modification orders (تعديلات) to avoid duplicates
-    cards = cards.exclude(manufacturing_order__order_type="modification")
 
     # Apply filters
     if date_from:
@@ -80,10 +78,22 @@ def production_reports(request):
     # Filter by tailor
     if tailor_id:
         if tailor_id == "without":
-            # cards without ANY splits
-            cards = cards.filter(splits__isnull=True)
+            # cards without ANY splits AND without modification tailor
+            cards = cards.filter(
+                splits__isnull=True,
+            ).exclude(
+                manufacturing_order__order_type="modification",
+                manufacturing_order__modification_request__tailor__isnull=False,
+            )
         else:
-            cards = cards.filter(splits__tailor_id=tailor_id).distinct()
+            # Include cards with splits for this tailor OR modification orders with this tailor
+            cards = cards.filter(
+                Q(splits__tailor_id=tailor_id)
+                | Q(
+                    manufacturing_order__order_type="modification",
+                    manufacturing_order__modification_request__tailor_id=tailor_id,
+                )
+            ).distinct()
 
     # Filter by cutter (production line)
     if cutter_id:
@@ -239,11 +249,11 @@ def export_production_report(request):
         "manufacturing_order__production_line",
         "manufacturing_order__order",
         "manufacturing_order__order__customer",
+        "manufacturing_order__modification_request__tailor",
     ).prefetch_related("splits__tailor")
 
     cards = cards.exclude(production_date__isnull=True)
     cards = cards.exclude(manufacturing_order__production_line_id=4)
-    cards = cards.exclude(manufacturing_order__order_type="modification")
 
     if date_from:
         cards = cards.filter(production_date__gte=date_from)
@@ -253,9 +263,20 @@ def export_production_report(request):
         cards = cards.filter(status=card_status)
     if tailor_id:
         if tailor_id == "without":
-            cards = cards.filter(splits__isnull=True)
+            cards = cards.filter(
+                splits__isnull=True,
+            ).exclude(
+                manufacturing_order__order_type="modification",
+                manufacturing_order__modification_request__tailor__isnull=False,
+            )
         else:
-            cards = cards.filter(splits__tailor_id=tailor_id).distinct()
+            cards = cards.filter(
+                Q(splits__tailor_id=tailor_id)
+                | Q(
+                    manufacturing_order__order_type="modification",
+                    manufacturing_order__modification_request__tailor_id=tailor_id,
+                )
+            ).distinct()
     if cutter_id:
         cards = cards.filter(manufacturing_order__production_line_id=cutter_id)
 

@@ -29,6 +29,8 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
             total_orders=Count("id"),
             pending_approval=Count("id", filter=Q(status="pending_approval")),
             pending=Count("id", filter=Q(status="pending")),
+            pending_no_mod=Count("id", filter=Q(status="pending") & ~Q(order_type="modification")),
+            pending_mod=Count("id", filter=Q(status="pending", order_type="modification")),
             in_progress=Count("id", filter=Q(status="in_progress")),
             ready_install=Count("id", filter=Q(status="ready_install")),
             completed=Count("id", filter=Q(status="completed")),
@@ -162,6 +164,19 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
                     order_date__gte=last_month_start, order_date__lt=this_month_start
                 ),
             ),
+            # تفصيل هذا الشهر حسب النوع
+            this_month_installation=Count(
+                "id",
+                filter=Q(order_date__gte=this_month_start, order_type="installation"),
+            ),
+            this_month_custom=Count(
+                "id",
+                filter=Q(order_date__gte=this_month_start, order_type="custom"),
+            ),
+            this_month_accessory=Count(
+                "id",
+                filter=Q(order_date__gte=this_month_start, order_type="accessory"),
+            ),
         )
 
         this_month_orders = month_stats["this_month"]
@@ -224,6 +239,39 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
         vip_pending_count = vip_stats["vip_pending"]
         vip_completed_count = vip_stats["vip_completed"]
 
+        # طلبات التركيب والتفصيل قيد التنفيذ
+        active_by_type = ManufacturingOrder.objects.filter(
+            status__in=["pending_approval", "pending", "in_progress"],
+        ).aggregate(
+            installation_active=Count("id", filter=Q(order_type="installation")),
+            custom_active=Count("id", filter=Q(order_type="custom")),
+            modification_active=Count("id", filter=Q(order_type="modification")),
+        )
+
+        # إجمالي الإنتاج بالمتر (نفس منطق صفحة التقارير)
+        from factory_accounting.models import FactoryCard
+        from decimal import Decimal
+        from datetime import datetime
+
+        today = timezone.now().date()
+        if today.day >= 25:
+            production_date_from = today.replace(day=25)
+        else:
+            if today.month == 1:
+                production_date_from = today.replace(year=today.year - 1, month=12, day=25)
+            else:
+                production_date_from = today.replace(month=today.month - 1, day=25)
+
+        production_date_aware = timezone.make_aware(datetime.combine(production_date_from, datetime.min.time()))
+        production_cards = FactoryCard.objects.filter(
+            production_date__gte=production_date_aware,
+            production_date__isnull=False,
+        ).exclude(manufacturing_order__production_line_id=4)
+
+        total_production_meters = Decimal("0.00")
+        for card in production_cards:
+            total_production_meters += card.get_actual_meters()
+
         # ✅ تحسين: إحصائيات خطوط الإنتاج باستخدام annotate (استعلام واحد بدلاً من N استعلامات)
         from .models import ProductionLine
 
@@ -281,6 +329,8 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
                 "total_orders": stats["total_orders"],
                 "pending_approval_orders": stats["pending_approval"],
                 "pending_orders": stats["pending"],
+                "pending_orders_no_mod": stats["pending_no_mod"],
+                "pending_mod_orders": stats["pending_mod"],
                 "in_progress_orders": stats["in_progress"],
                 "ready_install_orders": stats["ready_install"],
                 "completed_orders": stats["completed"],
@@ -289,6 +339,9 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
                 "cancelled_orders": stats["cancelled"],
                 # Additional metrics
                 "this_month_orders": this_month_orders,
+                "this_month_installation": month_stats["this_month_installation"],
+                "this_month_custom": month_stats["this_month_custom"],
+                "this_month_accessory": month_stats["this_month_accessory"],
                 "last_month_orders": last_month_orders,
                 "month_change_percent": round(month_change_percent, 1),
                 "pending_approval_count": pending_approval_count,
@@ -298,6 +351,13 @@ class ImprovedDashboardView(LoginRequiredMixin, PermissionRequiredMixin, Templat
                 "vip_orders_count": vip_orders_count,
                 "vip_pending_count": vip_pending_count,
                 "vip_completed_count": vip_completed_count,
+                # Active by type
+                "installation_active": active_by_type["installation_active"],
+                "custom_active": active_by_type["custom_active"],
+                "modification_active": active_by_type["modification_active"],
+                # Total production meters
+                "total_production_meters": total_production_meters,
+                "production_date_from": production_date_from.strftime("%Y-%m-%d"),
                 # Production lines statistics
                 "production_lines_stats": production_lines_stats,
                 # Date ranges

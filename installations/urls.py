@@ -30,26 +30,26 @@ urlpatterns = [
         name="upload_modification_images",
     ),
     path(
-        "modification/<int:modification_id>/create-manufacturing-order/",
-        views.create_manufacturing_order,
-        name="create_manufacturing_order",
+        "modification/<int:modification_id>/investigate/",
+        views.investigate_modification,
+        name="investigate_modification",
+    ),
+    path(
+        "modification/<int:modification_id>/approve/",
+        views.approve_modification,
+        name="approve_modification",
+    ),
+    path(
+        "modification/<int:modification_id>/complete/",
+        views.complete_modification,
+        name="complete_modification",
     ),
     path(
         "modification-requests/",
         views.modification_requests_list,
         name="modification_requests_list",
     ),
-    # أوامر التصنيع للتعديلات
-    path(
-        "manufacturing-order/<int:order_id>/",
-        views.manufacturing_order_detail,
-        name="manufacturing_order_detail",
-    ),
-    path(
-        "manufacturing-order/<int:order_id>/complete/",
-        views.complete_manufacturing_order,
-        name="complete_manufacturing_order",
-    ),
+    # أوامر التصنيع للتعديلات (من النظام الرئيسي)
     path(
         "manufacturing-orders/",
         views.manufacturing_orders_list,

@@ -1244,6 +1244,50 @@ def customer_detail_by_code(request, customer_code):
         "user", "user_branch", "customer_branch"
     ).order_by("-accessed_at")[:20]
 
+    # جلب طلبات التعديل الخاصة بالعميل
+    from installations.models import ModificationRequest as _ModReq
+    modification_requests = _ModReq.objects.filter(
+        customer=customer
+    ).select_related(
+        "installation", "installation__order", "created_by",
+    ).prefetch_related(
+        "modification_items__contract_curtain",
+    ).order_by("-created_at")[:20]
+
+    # بناء خط زمني لحياة العميل
+    timeline_events = []
+    for order in customer_orders:
+        timeline_events.append({
+            "date": order.created_at,
+            "type": "order",
+            "icon": "fas fa-file-invoice",
+            "color": "primary",
+            "title": f"طلب #{order.order_number}",
+            "subtitle": f"قيمة الطلب: {order.total_amount:,.0f}" if order.total_amount else "قيمة الطلب: 0",
+            "url": None,
+        })
+    for insp in inspections:
+        timeline_events.append({
+            "date": insp.created_at,
+            "type": "inspection",
+            "icon": "fas fa-eye",
+            "color": "info",
+            "title": f"معاينة #{insp.id}",
+            "subtitle": insp.status if hasattr(insp, "status") else "",
+            "url": None,
+        })
+    for mod in modification_requests:
+        timeline_events.append({
+            "date": mod.created_at,
+            "type": "modification",
+            "icon": "fas fa-tools",
+            "color": "warning",
+            "title": f"تعديل على {mod.installation.order.order_number}",
+            "subtitle": mod.get_status_display(),
+            "url": f"/installations/modification/{mod.id}/",
+        })
+    timeline_events.sort(key=lambda x: x["date"], reverse=True)
+
     # الحصول على صلاحيات المستخدم لهذا العميل
     permissions = get_user_customer_permissions(request.user)
 
@@ -1259,6 +1303,8 @@ def customer_detail_by_code(request, customer_code):
         "user_branch": request.user.branch,
         "note_form": CustomerNoteForm(),  # إضافة نموذج الملاحظة
         "can_edit": can_user_edit_customer(request.user, customer),
+        "modification_requests": modification_requests,
+        "timeline_events": timeline_events[:30],
     }
 
     return render(request, "customers/customer_detail.html", context)

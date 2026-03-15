@@ -14,6 +14,51 @@ from .models import CustomerDebt, InstallationArchive, InstallationSchedule
 logger = logging.getLogger(__name__)
 
 
+@receiver(post_save, sender="manufacturing.ManufacturingOrder")
+def sync_modification_status_from_manufacturing(sender, instance, created, **kwargs):
+    """
+    مزامنة حالة التعديل عند تغيير حالة أمر التصنيع من النوع 'modification'
+    """
+    if instance.order_type != "modification" or not instance.modification_request_id:
+        return
+
+    old_status = getattr(instance, "_old_status", None)
+    if created or (old_status is not None and old_status == instance.status):
+        return
+
+    try:
+        from .models import ModificationItem, ModificationRequest
+
+        mod_request = ModificationRequest.objects.get(pk=instance.modification_request_id)
+
+        if instance.status == "in_progress":
+            mod_request.status = "manufacturing"
+            mod_request.save(update_fields=["status"])
+
+        elif instance.status in ("ready_install", "completed", "delivered"):
+            # تحديث عناصر التعديل المرتبطة
+            ModificationItem.objects.filter(
+                modification_request=mod_request,
+                manufacturing_order_item__manufacturing_order=instance,
+            ).update(status="completed")
+
+            # إذا كل العناصر مكتملة، تحديث حالة الطلب
+            all_items = mod_request.modification_items.filter(needs_manufacturing=True)
+            completed_items = all_items.filter(status="completed")
+            if all_items.count() == completed_items.count():
+                mod_request.status = "completed"
+                mod_request.save(update_fields=["status"])
+
+                # تحديث حالة OrderItem
+                for item in mod_request.modification_items.all():
+                    if item.order_item_id:
+                        item.order_item.modification_status = "completed"
+                        item.order_item.save(update_fields=["modification_status"])
+
+    except Exception as e:
+        logger.error(f"خطأ في مزامنة حالة التعديل من أمر التصنيع {instance.pk}: {e}")
+
+
 @receiver(post_save, sender=InstallationSchedule)
 def installation_status_changed(sender, instance, created, **kwargs):
     """معالجة تغيير حالة التركيب"""

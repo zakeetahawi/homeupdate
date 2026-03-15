@@ -127,6 +127,9 @@
                                         <a href="{% url 'orders:order_detail' item.order.id %}"
                                            class="font-weight-bold text-primary"
                                            title="تفاصيل الطلب الأساسي">{{ item.order.order_number }}</a>
+                                        {% if item.is_modification %}
+                                            <span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;">تعديل</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <a href="{% url 'customers:customer_detail' item.order.customer.id %}"
@@ -256,7 +259,11 @@
                                         {% endif %}
                                     </td>
                                     <td class="text-center">
-                                        {% if item.status == 'needs_scheduling' %}
+                                        {% if item.status == 'needs_scheduling' and item.is_modification %}
+                                            <span class="badge bg-warning text-dark px-3 py-2">
+                                                <i class="fas fa-tools ml-1"></i> تعديل - بحاجة جدولة
+                                            </span>
+                                        {% elif item.status == 'needs_scheduling' %}
                                             <span class="badge bg-warning text-dark px-3 py-2">
                                                 <i class="fas fa-calendar-plus ml-1"></i> جديد
                                             </span>

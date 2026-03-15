@@ -30,6 +30,9 @@ from .forms import (
     ManufacturingOrderForm,
     ModificationErrorAnalysisForm,
     ModificationImageForm,
+    ModificationInvestigationForm,
+    ModificationItemForm,
+    ModificationItemInvestigationForm,
     ModificationReportForm,
     ModificationRequestForm,
     QuickScheduleForm,
@@ -50,6 +53,7 @@ from .models import (
     ModificationErrorAnalysis,
     ModificationErrorType,
     ModificationImage,
+    ModificationItem,
     ModificationReport,
     ModificationRequest,
     ReceiptMemo,
@@ -170,6 +174,11 @@ def dashboard(request):
     from django.db.models import Count, F, Q
 
     from manufacturing.models import ManufacturingOrder
+
+    # عدد طلبات التعديل بحاجة تعديل أو قيد التنفيذ فقط
+    total_modification_requests = ModificationRequest.objects.filter(
+        status__in=["pending", "manufacturing"]
+    ).count()
 
     # حساب الإحصائيات مباشرة بدلاً من استدعاء API عبر RequestFactory
     try:
@@ -332,7 +341,7 @@ def dashboard(request):
         # البطاقات الأساسية - استخدام البيانات من API
         "total_installations": stats.get("total_orders", 0),  # إجمالي طلبات التركيب
         "completed_installations": stats.get("completed", 0),  # تركيب مكتمل
-        "total_modifications": stats.get("modification_required", 0),  # طلبات التعديل
+        "total_modifications": total_modification_requests,  # طلبات التعديل من ModificationRequest
         "orders_needing_scheduling_count": stats.get(
             "orders_needing_scheduling", 0
         ),  # بانتظار الجدولة
@@ -418,6 +427,36 @@ def change_installation_status(request, installation_id):
                     status="pending",
                     description=f"أمر تعديل من قسم التركيبات - {reason}",
                 )
+
+                # الطلب الأساسي يغلق كمكتمل - التعديل يتتبع بشكل منفصل
+                installation.status = "completed"
+                if not installation.completion_date:
+                    from django.utils import timezone
+                    installation.completion_date = timezone.now()
+                installation.save()
+
+                InstallationStatusLog.objects.create(
+                    installation=installation,
+                    old_status="modification_required",
+                    new_status="completed",
+                    changed_by=request.user,
+                    reason="إغلاق تلقائي - التعديل يتتبع بشكل منفصل",
+                )
+
+                InstallationEventLog.objects.create(
+                    installation=installation,
+                    event_type="status_change",
+                    description="تم إغلاق التركيب كمكتمل تلقائياً - التعديل يتتبع بشكل منفصل",
+                    user=request.user,
+                    metadata={
+                        "old_status": "modification_required",
+                        "new_status": "completed",
+                        "auto_close": True,
+                    },
+                )
+
+                # تحديث new_status لتمرير "completed" إلى update_related_orders
+                new_status = "completed"
 
             # تحديث حالة الطلب وأمر التصنيع المقابل
             update_related_orders(installation, new_status, old_status, request.user)
@@ -596,13 +635,14 @@ def installation_list(request):
 
     # 2. جلب الطلبات التي تحتاج جدولة (فقط أوامر التصنيع الجاهزة للتركيب أو المسلمة)
     if not status_filter or status_filter == "needs_scheduling":
-        # أوامر التصنيع الجاهزة للتركيب أو المسلمة فقط
+        # أوامر التصنيع الجاهزة للتركيب أو المسلمة فقط (غير التعديل)
         ready_manufacturing_query = (
             ManufacturingOrder.objects.filter(
                 status__in=["ready_install", "delivered"],
                 order__selected_types__icontains="installation",
                 order__installationschedule__isnull=True,
             )
+            .exclude(order_type="modification")
             .select_related(
                 "order",
                 "order__customer",
@@ -655,6 +695,71 @@ def installation_list(request):
                     "driver": None,
                 }
                 for mfg_order in ready_manufacturing_query
+            ]
+        )
+
+        # 2b. أوامر تصنيع التعديل التي تحتاج جدولة (أي حالة تصنيع)
+        mod_manufacturing_query = (
+            ManufacturingOrder.objects.filter(
+                order_type="modification",
+                modification_request__isnull=False,
+            )
+            .exclude(
+                modification_request__status__in=["cancelled", "completed"],
+            )
+            .exclude(
+                # استثناء التعديلات التي لديها InstallationSchedule بحالة modification_scheduled أو أعلى
+                modification_request__installation__status__in=[
+                    "modification_scheduled",
+                    "modification_in_progress",
+                    "modification_completed",
+                ],
+            )
+            .select_related(
+                "order",
+                "order__customer",
+                "order__branch",
+                "order__salesperson",
+                "production_line",
+                "modification_request",
+                "modification_request__installation",
+            )
+        )
+
+        if search:
+            search_q = (
+                Q(order__order_number__icontains=search)
+                | Q(order__customer__name__icontains=search)
+                | Q(order__customer__phone__icontains=search)
+            )
+            mod_manufacturing_query = mod_manufacturing_query.filter(search_q)
+
+        if branch_filter:
+            mod_manufacturing_query = mod_manufacturing_query.filter(
+                order__branch_id=branch_filter
+            )
+
+        mod_manufacturing_query = mod_manufacturing_query.order_by("-created_at")[:MAX_RESULTS]
+        installation_items.extend(
+            [
+                {
+                    "type": "needs_scheduling",
+                    "installation": mfg_order.modification_request.installation if mfg_order.modification_request else None,
+                    "order": mfg_order.order,
+                    "customer": mfg_order.order.customer,
+                    "team": None,
+                    "status": "needs_scheduling",
+                    "scheduled_date": None,
+                    "created_at": mfg_order.created_at,
+                    "location_type": None,
+                    "manufacturing_order": mfg_order,
+                    "windows_count": None,
+                    "technicians": [],
+                    "driver": None,
+                    "is_modification": True,
+                    "modification_request": mfg_order.modification_request,
+                }
+                for mfg_order in mod_manufacturing_query
             ]
         )
 
@@ -1530,81 +1635,377 @@ def schedule_from_needs_scheduling(request, installation_id):
 # باقي الدوال المطلوبة للنظام
 @login_required
 def create_modification_request(request, installation_id):
-    """إنشاء طلب تعديل"""
-    installation = get_object_or_404(InstallationSchedule, id=installation_id)
+    """إنشاء طلب تعديل مع تحديد الستائر والأقمشة المطلوب تعديلها"""
+    installation = get_object_or_404(
+        InstallationSchedule.objects.select_related("order", "order__customer"),
+        id=installation_id,
+    )
+    order = installation.order
+    curtains = order.contract_curtains.prefetch_related(
+        "fabrics", "fabrics__order_item"
+    ).order_by("sequence")
 
     if request.method == "POST":
         form = ModificationRequestForm(request.POST)
         if form.is_valid():
             modification_request = form.save(commit=False)
             modification_request.installation = installation
-            modification_request.customer = installation.order.customer
+            modification_request.customer = order.customer
+            modification_request.created_by = request.user
             modification_request.save()
 
-            # تحديث حالة التركيب إلى يحتاج تعديل
+            # معالجة عناصر التعديل (الستائر والأقمشة) - باستخدام CurtainFabric
+            items_created = 0
+            for curtain in curtains:
+                # بناء قاموس الأقمشة الفعلية لهذه الستارة
+                fabric_map = {}
+                for cf in curtain.fabrics.all():
+                    fabric_map[cf.fabric_type] = cf
+
+                for fabric_type in ["light", "heavy", "blackout", "additional", "belt"]:
+                    key = f"curtain_{curtain.id}_{fabric_type}"
+                    if request.POST.get(key) == "on":
+                        reason = request.POST.get(f"{key}_reason", "")
+                        new_meters = request.POST.get(f"{key}_meters", "")
+
+                        # تحديد عنصر الطلب الأصلي من CurtainFabric
+                        cf = fabric_map.get(fabric_type)
+                        oi = cf.order_item if cf else None
+
+                        ModificationItem.objects.create(
+                            modification_request=modification_request,
+                            contract_curtain=curtain,
+                            fabric_type=fabric_type,
+                            order_item=oi,
+                            modification_reason=reason or modification_request.description,
+                            needs_manufacturing=True,
+                            new_meters=float(new_meters) if new_meters else None,
+                        )
+                        items_created += 1
+
+                        # تحديث حالة التعديل في عنصر الطلب
+                        if oi:
+                            oi.modification_status = "pending"
+                            oi.save(update_fields=["modification_status"])
+
+            if items_created == 0:
+                modification_request.delete()
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return JsonResponse({"success": False, "error": "يجب اختيار على الأقل ستارة واحدة للتعديل"})
+                messages.error(request, "يجب اختيار على الأقل ستارة واحدة للتعديل")
+                return redirect("installations:create_modification_request", installation_id=installation.id)
+
+            # تحديث حالة التركيب
             installation.status = "modification_required"
             installation.save()
 
-            # إنشاء أمر تصنيع للتعديل في جدول التصنيع الرئيسي
-            from manufacturing.models import (
-                ManufacturingOrder as MainManufacturingOrder,
+            # سجل الحدث
+            InstallationEventLog.objects.create(
+                installation=installation,
+                event_type="modification_request",
+                description=f"طلب تعديل جديد - {items_created} عنصر(عناصر)",
+                user=request.user,
+                metadata={"modification_id": modification_request.id, "items_count": items_created},
             )
 
-            # تأكد أن order_type='modification' مدعوم في ORDER_TYPE_CHOICES في manufacturing.models.ManufacturingOrder
-            MainManufacturingOrder.objects.create(
-                order=installation.order,
-                order_type="modification",
-                status="pending",
-                expected_delivery_date=installation.order.expected_delivery_date
-                or timezone.now().date(),
-                description=f"أمر تعديل من قسم التركيبات - {modification_request.description}",
-                # إذا أضفت حقل modification_request في ManufacturingOrder (manufacturing app)، أضفه هنا
-            )
+            # إشعار البائع
+            _notify_salesperson_modification(modification_request, request.user)
 
             if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return JsonResponse(
-                    {
-                        "success": True,
-                        "modification_id": modification_request.id,
-                        "message": "تم إنشاء طلب التعديل بنجاح",
-                    }
-                )
+                return JsonResponse({
+                    "success": True,
+                    "modification_id": modification_request.id,
+                    "message": "تم إنشاء طلب التعديل بنجاح",
+                })
 
-            messages.success(request, "تم إنشاء طلب التعديل بنجاح")
-            return redirect(
-                "installations:modification_detail",
-                modification_id=modification_request.id,
-            )
+            messages.success(request, f"تم إنشاء طلب التعديل بنجاح ({items_created} عنصر)")
+            return redirect("installations:investigate_modification", modification_id=modification_request.id)
         else:
             if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return JsonResponse(
-                    {
-                        "success": False,
-                        "error": "بيانات غير صحيحة",
-                        "form_errors": form.errors,
-                    }
-                )
+                return JsonResponse({"success": False, "error": "بيانات غير صحيحة", "form_errors": form.errors})
     else:
         form = ModificationRequestForm()
 
-    context = {"form": form, "installation": installation, "title": "إنشاء طلب تعديل"}
-
+    context = {
+        "form": form,
+        "installation": installation,
+        "order": order,
+        "curtains": curtains,
+        "title": "إنشاء طلب تعديل",
+    }
     return render(request, "installations/create_modification.html", context)
+
+
+def _notify_salesperson_modification(modification_request, created_by):
+    """إرسال إشعار للبائع عن طلب التعديل"""
+    try:
+        from django.contrib.contenttypes.models import ContentType
+        from notifications.models import Notification
+
+        order = modification_request.installation.order
+        salesperson_user = None
+        if order.salesperson and hasattr(order.salesperson, "user"):
+            salesperson_user = order.salesperson.user
+        elif order.created_by:
+            salesperson_user = order.created_by
+
+        if not salesperson_user:
+            return
+
+        items = modification_request.modification_items.select_related("contract_curtain")
+        items_desc = ", ".join([
+            f"{item.contract_curtain.room_name} ({item.get_fabric_type_display()})"
+            for item in items
+        ])
+
+        notification = Notification.objects.create(
+            title=f"طلب تعديل على الطلب {order.order_number}",
+            message=f"تم طلب تعديل على طلبك للعميل {order.customer.name}: {items_desc}",
+            notification_type="modification_request",
+            content_type=ContentType.objects.get_for_model(ModificationRequest),
+            object_id=modification_request.id,
+            created_by=created_by,
+            priority="high",
+        )
+        notification.visible_to.add(salesperson_user)
+    except Exception as e:
+        logger.error(f"خطأ في إرسال إشعار التعديل: {e}")
 
 
 @login_required
 def modification_detail(request, modification_id):
-    """تفاصيل طلب التعديل"""
-    modification_request = get_object_or_404(ModificationRequest, id=modification_id)
+    """تفاصيل طلب التعديل مع عناصر التعديل والصور"""
+    modification_request = get_object_or_404(
+        ModificationRequest.objects.select_related(
+            "installation", "installation__order", "installation__order__customer",
+            "installation__order__salesperson", "created_by", "investigated_by",
+        ),
+        id=modification_id,
+    )
+    items = modification_request.modification_items.select_related(
+        "contract_curtain", "order_item", "manufacturing_order_item",
+    ).order_by("contract_curtain__sequence")
     images = ModificationImage.objects.filter(modification=modification_request)
+
+    # أوامر التصنيع المرتبطة
+    from manufacturing.models import ManufacturingOrder as MainManufacturingOrder
+    mfg_orders = MainManufacturingOrder.objects.filter(
+        modification_request=modification_request
+    ).order_by("-created_at")
 
     context = {
         "modification_request": modification_request,
+        "items": items,
         "images": images,
-        "title": "تفاصيل طلب التعديل",
+        "mfg_orders": mfg_orders,
+        "title": f"طلب تعديل #{modification_request.pk}",
     }
-
     return render(request, "installations/modification_detail.html", context)
+
+
+@login_required
+@permission_required("installations.can_investigate_modification", raise_exception=True)
+def investigate_modification(request, modification_id):
+    """التحقيق في طلب التعديل وتحديد المخطئ"""
+    modification_request = get_object_or_404(
+        ModificationRequest.objects.select_related(
+            "installation", "installation__order", "customer",
+        ),
+        id=modification_id,
+    )
+    items = modification_request.modification_items.select_related(
+        "contract_curtain", "order_item",
+    ).order_by("contract_curtain__sequence")
+
+    if request.method == "POST":
+        main_form = ModificationInvestigationForm(request.POST, instance=modification_request)
+        if main_form.is_valid():
+            mod_req = main_form.save(commit=False)
+            mod_req.investigation_status = "completed"
+            mod_req.investigated_by = request.user
+            mod_req.investigation_date = timezone.now()
+            mod_req.status = "investigating"
+            mod_req.save()
+
+            # معالجة عناصر التعديل الفردية
+            for item in items:
+                fault_party = request.POST.get(f"item_{item.id}_fault_party", "")
+                fault_details = request.POST.get(f"item_{item.id}_fault_details", "")
+                needs_mfg = request.POST.get(f"item_{item.id}_needs_manufacturing") == "on"
+                new_meters = request.POST.get(f"item_{item.id}_new_meters", "")
+
+                item.fault_party = fault_party
+                item.fault_details = fault_details
+                item.fault_resolved = bool(fault_party)
+                item.needs_manufacturing = needs_mfg
+                item.status = "investigating"
+                if new_meters:
+                    item.new_meters = float(new_meters)
+                item.save()
+
+            messages.success(request, "تم حفظ نتائج التحقيق بنجاح")
+            return redirect("installations:modification_detail", modification_id=modification_request.id)
+    else:
+        main_form = ModificationInvestigationForm(instance=modification_request)
+
+    context = {
+        "form": main_form,
+        "modification_request": modification_request,
+        "items": items,
+        "title": "التحقيق في طلب التعديل",
+    }
+    return render(request, "installations/investigate_modification.html", context)
+
+
+@login_required
+@permission_required("installations.can_investigate_modification", raise_exception=True)
+def approve_modification(request, modification_id):
+    """الموافقة على طلب التعديل وإنشاء أمر تصنيع في المصنع الرئيسي"""
+    modification_request = get_object_or_404(
+        ModificationRequest.objects.select_related(
+            "installation", "installation__order",
+        ),
+        id=modification_id,
+    )
+
+    if request.method != "POST":
+        return redirect("installations:modification_detail", modification_id=modification_request.id)
+
+    from manufacturing.models import ManufacturingOrder as MainManufacturingOrder
+    from manufacturing.models import ManufacturingOrderItem
+
+    items_needing_mfg = modification_request.modification_items.filter(
+        needs_manufacturing=True,
+    ).select_related("contract_curtain", "order_item")
+
+    if not items_needing_mfg.exists():
+        messages.warning(request, "لا توجد عناصر تحتاج تصنيع")
+        return redirect("installations:modification_detail", modification_id=modification_request.id)
+
+    order = modification_request.installation.order
+
+    # إنشاء أمر تصنيع رئيسي
+    # تاريخ التسليم المتوقع = الآن + 72 ساعة (3 أيام)
+    delivery_date = (timezone.now() + timezone.timedelta(days=3)).date()
+    mfg_order = MainManufacturingOrder.objects.create(
+        order=order,
+        order_type="modification",
+        modification_request=modification_request,
+        status="pending",
+        order_date=timezone.now().date(),
+        expected_delivery_date=delivery_date,
+        description=f"أمر تعديل - {modification_request.modification_type}",
+        created_by=request.user,
+    )
+
+    # إنشاء عناصر أمر التصنيع
+    for item in items_needing_mfg:
+        mfg_item = ManufacturingOrderItem.objects.create(
+            manufacturing_order=mfg_order,
+            order_item=item.order_item,
+            product_name=f"{item.contract_curtain.room_name} - {item.get_fabric_type_display()}",
+            quantity=item.effective_meters or 1,
+            specifications=f"تعديل: {item.modification_reason}",
+        )
+        item.manufacturing_order_item = mfg_item
+        item.status = "manufacturing"
+        item.save(update_fields=["manufacturing_order_item", "status"])
+
+        # تحديث حالة عنصر الطلب
+        if item.order_item:
+            item.order_item.modification_status = "in_progress"
+            item.order_item.save(update_fields=["modification_status"])
+
+    # تحديث الحالات
+    modification_request.status = "manufacturing"
+    modification_request.save(update_fields=["status"])
+
+    installation = modification_request.installation
+    installation.status = "modification_in_progress"
+    installation.save()
+
+    InstallationEventLog.objects.create(
+        installation=installation,
+        event_type="modification_request",
+        description=f"تمت الموافقة وإنشاء أمر تصنيع #{mfg_order.pk} ({items_needing_mfg.count()} عنصر)",
+        user=request.user,
+        metadata={"manufacturing_order_id": mfg_order.pk, "modification_id": modification_request.pk},
+    )
+
+    messages.success(request, f"تم إنشاء أمر التصنيع #{mfg_order.pk} بنجاح")
+    return redirect("installations:modification_detail", modification_id=modification_request.id)
+
+
+@login_required
+def complete_modification(request, modification_id):
+    """إكمال طلب التعديل (بعد إتمام التصنيع)"""
+    modification_request = get_object_or_404(
+        ModificationRequest.objects.select_related("installation"),
+        id=modification_id,
+    )
+
+    if request.method != "POST":
+        return redirect("installations:modification_detail", modification_id=modification_request.id)
+
+    # تحديث جميع العناصر
+    items = modification_request.modification_items.all()
+    for item in items:
+        item.status = "completed"
+        item.save(update_fields=["status"])
+        if item.order_item:
+            item.order_item.modification_status = "completed"
+            item.order_item.save(update_fields=["modification_status"])
+
+    modification_request.status = "completed"
+    modification_request.save(update_fields=["status"])
+
+    installation = modification_request.installation
+    installation.status = "modification_completed"
+    installation.save()
+
+    InstallationEventLog.objects.create(
+        installation=installation,
+        event_type="completion",
+        description="تم إكمال طلب التعديل",
+        user=request.user,
+        metadata={"modification_id": modification_request.pk},
+    )
+
+    # إشعار البائع بإكمال التعديل
+    _notify_salesperson_modification_completed(modification_request, request.user)
+
+    messages.success(request, "تم إكمال طلب التعديل بنجاح")
+    return redirect("installations:modification_detail", modification_id=modification_request.id)
+
+
+def _notify_salesperson_modification_completed(modification_request, completed_by):
+    """إشعار البائع بإكمال التعديل"""
+    try:
+        from django.contrib.contenttypes.models import ContentType
+        from notifications.models import Notification
+
+        order = modification_request.installation.order
+        salesperson_user = None
+        if order.salesperson and hasattr(order.salesperson, "user"):
+            salesperson_user = order.salesperson.user
+        elif order.created_by:
+            salesperson_user = order.created_by
+
+        if not salesperson_user:
+            return
+
+        notification = Notification.objects.create(
+            title=f"تم إكمال التعديل - الطلب {order.order_number}",
+            message=f"تم إكمال التعديل على طلب العميل {order.customer.name} وأصبح جاهزاً",
+            notification_type="modification_completed",
+            content_type=ContentType.objects.get_for_model(ModificationRequest),
+            object_id=modification_request.id,
+            created_by=completed_by,
+            priority="normal",
+        )
+        notification.visible_to.add(salesperson_user)
+    except Exception as e:
+        logger.error(f"خطأ في إرسال إشعار إكمال التعديل: {e}")
 
 
 @login_required
@@ -1631,109 +2032,29 @@ def upload_modification_images(request, modification_id):
         "modification_request": modification_request,
         "title": "رفع صور التعديل",
     }
-
     return render(request, "installations/upload_images.html", context)
-
-
-@login_required
-def create_manufacturing_order(request, modification_id):
-    """إنشاء أمر تصنيع للتعديل"""
-    modification_request = get_object_or_404(ModificationRequest, id=modification_id)
-
-    if request.method == "POST":
-        form = ManufacturingOrderForm(request.POST)
-        if form.is_valid():
-            manufacturing_order = form.save(commit=False)
-            manufacturing_order.modification_request = modification_request
-            manufacturing_order.order_type = "modification"
-            manufacturing_order.save()
-
-            # تحديث حالة طلب التعديل
-            modification_request.installation.status = "modification_in_progress"
-            modification_request.installation.save()
-
-            messages.success(request, "تم إنشاء أمر التصنيع بنجاح")
-            return redirect(
-                "installations:manufacturing_order_detail",
-                order_id=manufacturing_order.id,
-            )
-    else:
-        form = ManufacturingOrderForm()
-
-    context = {
-        "form": form,
-        "modification_request": modification_request,
-        "title": "إنشاء أمر تصنيع للتعديل",
-    }
-
-    return render(request, "installations/create_manufacturing_order.html", context)
-
-
-@login_required
-def manufacturing_order_detail(request, order_id):
-    """تفاصيل أمر التصنيع"""
-    manufacturing_order = get_object_or_404(ModificationManufacturingOrder, id=order_id)
-
-    context = {
-        "manufacturing_order": manufacturing_order,
-        "title": "تفاصيل أمر التصنيع",
-    }
-
-    return render(request, "installations/manufacturing_order_detail.html", context)
-
-
-@login_required
-def complete_manufacturing_order(request, order_id):
-    """إكمال أمر التصنيع"""
-    manufacturing_order = get_object_or_404(ModificationManufacturingOrder, id=order_id)
-
-    if request.method == "POST":
-        form = ModificationReportForm(request.POST, request.FILES)
-        if form.is_valid():
-            report = form.save(commit=False)
-            report.manufacturing_order = manufacturing_order
-            report.modification_request = manufacturing_order.modification_request
-            report.created_by = request.user
-            report.save()
-
-            # تحديث حالة أمر التصنيع
-            manufacturing_order.status = "completed"
-            manufacturing_order.actual_completion_date = timezone.now()
-            manufacturing_order.save()
-
-            # تحديث حالة التركيب
-            installation = manufacturing_order.modification_request.installation
-            installation.status = "modification_completed"
-            installation.save()
-
-            messages.success(request, "تم إكمال أمر التصنيع بنجاح")
-            return redirect(
-                "installations:manufacturing_order_detail",
-                order_id=manufacturing_order.id,
-            )
-    else:
-        form = ModificationReportForm()
-
-    context = {
-        "form": form,
-        "manufacturing_order": manufacturing_order,
-        "title": "إكمال أمر التصنيع",
-    }
-
-    return render(request, "installations/complete_manufacturing_order.html", context)
 
 
 @login_required
 def modification_requests_list(request):
     """قائمة طلبات التعديل"""
     modifications = ModificationRequest.objects.select_related(
-        "installation", "installation__order", "customer"
+        "installation", "installation__order", "customer", "created_by",
+        "investigated_by"
+    ).prefetch_related(
+        "modification_items__contract_curtain",
+        "modification_items__order_item",
     ).order_by("-created_at")
 
-    # فلترة
+    # فلترة حسب الحالة
     status_filter = request.GET.get("status")
-    if status_filter:
-        modifications = modifications.filter(installation__status=status_filter)
+    if status_filter == "all":
+        pass  # عرض الكل بدون فلتر
+    elif status_filter and status_filter != "active":
+        modifications = modifications.filter(status=status_filter)
+    else:
+        # افتراضياً أو active = بحاجة تعديل أو قيد التنفيذ فقط
+        modifications = modifications.filter(status__in=["pending", "manufacturing"])
 
     priority_filter = request.GET.get("priority")
     if priority_filter:
@@ -1744,24 +2065,28 @@ def modification_requests_list(request):
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
-    context = {"page_obj": page_obj, "title": "طلبات التعديل"}
+    context = {
+        "page_obj": page_obj,
+        "title": "طلبات التعديل",
+        "status_choices": ModificationRequest.STATUS_CHOICES,
+    }
 
     return render(request, "installations/modification_requests_list.html", context)
 
 
 @login_required
 def manufacturing_orders_list(request):
-    """قائمة أوامر التصنيع للتعديلات"""
-    orders = (
-        ModificationManufacturingOrder.objects.select_related(
-            "modification_request",
-            "modification_request__installation",
-            "modification_request__installation__order",
-            "assigned_to",
-        )
-        .filter(order_type="modification")
-        .order_by("-created_at")
-    )
+    """قائمة أوامر التصنيع للتعديلات - من نظام التصنيع الرئيسي"""
+    from manufacturing.models import ManufacturingOrder as MainManufacturingOrder
+
+    orders = MainManufacturingOrder.objects.select_related(
+        "order", "order__customer", "modification_request",
+        "modification_request__installation",
+    ).prefetch_related(
+        "items__product",
+    ).filter(
+        order_type="modification"
+    ).order_by("-created_at")
 
     # فلترة
     status_filter = request.GET.get("status")

@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}طلبات التعديل - نظام الخواجه{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <!-- العنوان والفلاتر -->
+    <div class="row mb-3 align-items-center">
+        <div class="col-md-6">
+            <h4 class="m-0 text-warning"><i class="fas fa-tools me-2"></i>طلبات التعديل</h4>
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="{% url 'installations:dashboard' %}" class="btn btn-sm btn-secondary">
+                <i class="fas fa-tachometer-alt"></i> لوحة التحكم
+            </a>
+            <a href="{% url 'installations:manufacturing_orders_list' %}" class="btn btn-sm btn-outline-primary ms-1">
+                <i class="fas fa-industry"></i> أوامر التصنيع
+            </a>
+        </div>
+    </div>
+
+    <!-- فلاتر البحث -->
+    <div class="card shadow mb-3">
+        <div class="card-body py-2">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small mb-1">الحالة</label>
+                    <select class="form-select form-select-sm" name="status">
+                        <option value="active" {% if not request.GET.status or request.GET.status == 'active' %}selected{% endif %}>النشطة فقط</option>
+                        <option value="all" {% if request.GET.status == 'all' %}selected{% endif %}>-- الكل --</option>
+                        {% for val, label in status_choices %}
+                        <option value="{{ val }}" {% if request.GET.status == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small mb-1">الأولوية</label>
+                    <select class="form-select form-select-sm" name="priority">
+                        <option value="">-- الكل --</option>
+                        <option value="urgent" {% if request.GET.priority == 'urgent' %}selected{% endif %}>عاجل</option>
+                        <option value="high" {% if request.GET.priority == 'high' %}selected{% endif %}>عالي</option>
+                        <option value="medium" {% if request.GET.priority == 'medium' %}selected{% endif %}>متوسط</option>
+                        <option value="low" {% if request.GET.priority == 'low' %}selected{% endif %}>منخفض</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-sm btn-warning w-100">
+                        <i class="fas fa-search"></i> بحث
+                    </button>
+                </div>
+                {% if request.GET.status or request.GET.priority %}
+                <div class="col-md-2">
+                    <a href="{% url 'installations:modification_requests_list' %}" class="btn btn-sm btn-outline-secondary w-100">
+                        <i class="fas fa-times"></i> مسح
+                    </a>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- الجدول -->
+    <div class="card shadow">
+        <div class="card-body p-0">
+            {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>#</th>
+                            <th>الطلب</th>
+                            <th>العميل</th>
+                            <th>نوع التعديل</th>
+                            <th>الحالة</th>
+                            <th>الأولوية</th>
+                            <th>العناصر</th>
+                            <th>تاريخ الإنشاء</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mod in page_obj %}
+                        <tr>
+                            <td class="text-muted small">{{ mod.pk }}</td>
+                            <td>
+                                <a href="{% url 'installations:installation_detail' mod.installation.id %}">
+                                    {{ mod.installation.order.order_number }}
+                                </a>
+                            </td>
+                            <td>{{ mod.customer.name }}</td>
+                            <td class="small">{{ mod.modification_type }}</td>
+                            <td>
+                                <span class="badge
+                                    {% if mod.status == 'pending' %}bg-secondary
+                                    {% elif mod.status == 'investigating' %}bg-info
+                                    {% elif mod.status == 'approved' %}bg-primary
+                                    {% elif mod.status == 'manufacturing' %}bg-warning text-dark
+                                    {% elif mod.status == 'completed' %}bg-success
+                                    {% elif mod.status == 'cancelled' %}bg-danger
+                                    {% endif %}">
+                                    {{ mod.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge
+                                    {% if mod.priority == 'urgent' %}bg-danger
+                                    {% elif mod.priority == 'high' %}bg-warning text-dark
+                                    {% elif mod.priority == 'medium' %}bg-info
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ mod.get_priority_display }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border">{{ mod.modification_items.count }}</span>
+                            </td>
+                            <td class="small text-muted">{{ mod.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                <a href="{% url 'installations:modification_detail' mod.id %}" class="btn btn-xs btn-sm btn-outline-warning">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if mod.status == 'pending' or mod.status == 'investigating' %}
+                                <a href="{% url 'installations:investigate_modification' mod.id %}" class="btn btn-xs btn-sm btn-outline-info ms-1">
+                                    <i class="fas fa-search"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ترقيم الصفحات -->
+            {% if page_obj.paginator.num_pages > 1 %}
+            <div class="d-flex justify-content-center py-3">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}">السابق</a></li>
+                        {% endif %}
+                        <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+                        {% if page_obj.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}">التالي</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="text-center p-5 text-muted">
+                <i class="fas fa-tools fa-3x mb-3"></i>
+                <h5>لا توجد طلبات تعديل</h5>
+                <p>لم يتم العثور على طلبات تعديل بالمعايير المحددة</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_css %}
+<style>
+.btn-xs { padding: 0.15rem 0.5rem; font-size: 0.78rem; }
+</style>
+{% endblock %}

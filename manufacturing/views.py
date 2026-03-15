@@ -194,14 +194,10 @@ class ManufacturingOrderListView(
         # استثناء طلبات المنتجات (products) من أوامر التصنيع - لا يجب أن تظهر هنا أبداً
         queryset = queryset.exclude(order__selected_types__contains=["products"])
 
-        # استثناء طلبات التعديل افتراضياً (إلا إذا تم اختيارها يدوياً في فلتر نوع الطلب أو show_all=1)
+        # جلب فلاتر نوع الطلب (لاستخدامها لاحقاً)
         order_type_filters = self.request.GET.getlist("order_type")
         order_type_filters = [f for f in order_type_filters if f and f.strip()]
         show_all = self.request.GET.get("show_all") == "1"
-
-        # إذا لم يكن هناك فلتر يدوي لنوع الطلب ولا show_all، استثني طلبات التعديل
-        if not order_type_filters and not show_all:
-            queryset = queryset.exclude(order_type="modification")
 
         # تطبيق الفلترة الشهرية (بناءً على تاريخ الطلب)
         queryset, self.monthly_filter_context = apply_monthly_filter(
@@ -893,8 +889,7 @@ class VIPOrdersListView(
             .order_by("-created_at", "expected_delivery_date")
         )
 
-        # تطبيق فلترة السنة الافتراضية
-        queryset = apply_default_year_filter(queryset, self.request, "order_date")
+        # لا يتم تطبيق فلترة السنة الافتراضية - يعرض جميع طلبات VIP
 
         # تطبيق فلاتر البحث إذا وجدت (يشمل جميع أرقام الفواتير والعقود)
         search_query = self.request.GET.get("search", "").strip()
@@ -1045,7 +1040,14 @@ class ManufacturingOrderDetailView(
 
         # الحصول على جميع عناصر الطلب الأصلي
         if self.object.order:
-            order_items = self.object.order.items.select_related("product").all()
+            # لأوامر التعديل: نعرض فقط العناصر المرتبطة بالتعديل
+            if self.object.order_type == "modification":
+                mfg_order_item_ids = self.object.items.values_list("order_item_id", flat=True)
+                order_items = self.object.order.items.filter(
+                    id__in=mfg_order_item_ids
+                ).select_related("product").all()
+            else:
+                order_items = self.object.order.items.select_related("product").all()
 
             # إنشاء قاموس لبيانات التقطيع والاستلام
             items_data = []
@@ -3343,20 +3345,25 @@ def manufacturing_order_detail_by_code(request, manufacturing_code):
     """عرض تفاصيل أمر التصنيع باستخدام كود التصنيع"""
     # البحث بطريقة محسنة للأداء
     if "-M" in manufacturing_code:
-        order_number = manufacturing_code.replace("-M", "")
-        # قد يكون هناك عدة أوامر تصنيع لنفس الطلب - نأخذ الأحدث
-        manufacturing_orders = (
-            ManufacturingOrder.objects.filter(order__order_number=order_number)
-            .select_related("order", "order__customer")
-            .order_by("-created_at")
-        )
+        # إزالة لاحقة التعديل إن وجدت (مثل -M-تعديل)
+        order_number = manufacturing_code.split("-M")[0]
+        is_modification = "-M-" in manufacturing_code and manufacturing_code.endswith("تعديل")
 
-        if not manufacturing_orders.exists():
+        # تحديد نوع الأمر المطلوب
+        qs = ManufacturingOrder.objects.filter(
+            order__order_number=order_number
+        ).select_related("order", "order__customer").order_by("-created_at")
+
+        if is_modification:
+            qs = qs.filter(order_type="modification")
+        else:
+            qs = qs.exclude(order_type="modification")
+
+        if not qs.exists():
             from django.http import Http404
-
             raise Http404(f"لم يتم العثور على أمر تصنيع للطلب {order_number}")
 
-        manufacturing_order = manufacturing_orders.first()
+        manufacturing_order = qs.first()
     else:
         # للأكواد القديمة
         manufacturing_id = manufacturing_code.replace("#", "").replace("-M", "")
@@ -3365,7 +3372,98 @@ def manufacturing_order_detail_by_code(request, manufacturing_code):
             id=manufacturing_id,
         )
 
+    # أوامر التعديل لها صفحة مخصصة
+    if manufacturing_order.order_type == "modification" and manufacturing_order.modification_request_id:
+        return modification_manufacturing_detail(request, manufacturing_order.pk)
+
     return ManufacturingOrderDetailView.as_view()(request, pk=manufacturing_order.pk)
+
+
+@login_required
+def modification_manufacturing_detail(request, pk):
+    """صفحة تفاصيل أمر تصنيع تعديل مخصصة"""
+    from installations.models import (
+        InstallationEventLog,
+        ModificationImage,
+        ModificationItem,
+        ModificationRequest,
+    )
+    from factory_accounting.models import Tailor
+
+    mfg_order = get_object_or_404(
+        ManufacturingOrder.objects.select_related(
+            "order", "order__customer", "order__branch", "order__created_by",
+            "modification_request", "modification_request__customer",
+            "modification_request__installation",
+            "modification_request__investigated_by",
+            "modification_request__created_by",
+            "modification_request__tailor",
+            "created_by",
+        ),
+        pk=pk,
+    )
+
+    modification = mfg_order.modification_request
+    installation = modification.installation
+
+    # معالجة تعيين الخياط
+    if request.method == "POST" and "tailor_id" in request.POST:
+        tailor_id = request.POST.get("tailor_id")
+        if tailor_id:
+            tailor = get_object_or_404(Tailor, pk=tailor_id, is_active=True, role="tailor")
+            modification.tailor = tailor
+        else:
+            modification.tailor = None
+        modification.save(update_fields=["tailor"])
+        from django.contrib import messages as djmessages
+        djmessages.success(request, "تم تحديث الخياط بنجاح")
+        return redirect("manufacturing:modification_manufacturing_detail", pk=pk)
+
+    # عناصر التعديل المرتبطة بأمر التصنيع
+    items = modification.modification_items.filter(
+        needs_manufacturing=True,
+    ).select_related(
+        "contract_curtain", "order_item",
+    ).order_by("contract_curtain__sequence")
+
+    # إجمالي الأمتار
+    total_meters = sum(item.effective_meters or 0 for item in items)
+
+    # الأيام المتبقية للتسليم
+    from django.utils import timezone as tz
+    today = tz.now().date()
+    days_remaining = (mfg_order.expected_delivery_date - today).days if mfg_order.expected_delivery_date else 0
+
+    # صور التعديل
+    images = ModificationImage.objects.filter(
+        modification=modification,
+    ).order_by("-uploaded_at")
+
+    # الفنيين
+    technicians = installation.technicians.filter(is_active=True)
+
+    # سجل الأحداث المتعلقة بالتعديل
+    event_logs = InstallationEventLog.objects.filter(
+        installation=installation,
+        event_type="modification_request",
+    ).select_related("user").order_by("-created_at")[:15]
+
+    # قائمة الخياطين النشطين
+    tailors = Tailor.objects.filter(is_active=True, role="tailor").order_by("name")
+
+    context = {
+        "mfg_order": mfg_order,
+        "modification": modification,
+        "items": items,
+        "total_meters": total_meters,
+        "days_remaining": days_remaining,
+        "images": images,
+        "technicians": technicians,
+        "event_logs": event_logs,
+        "tailors": tailors,
+        "title": f"أمر تصنيع تعديل - {mfg_order.manufacturing_code}",
+    }
+    return render(request, "manufacturing/modification_manufacturing_detail.html", context)
 
 
 @login_required
@@ -5369,13 +5467,25 @@ def material_summary_view(request, pk):
     # Check if partial render requested
     is_partial = request.GET.get("partial") == "true"
 
-    # استخدام الدالة المساعدة لتوليد البيانات
-    summary_context = get_material_summary_context(order)
+    # For modification orders, use modification-specific context
+    is_modification = (
+        manufacturing_order.order_type == "modification"
+        and manufacturing_order.modification_request_id
+    )
+
+    if is_modification:
+        from manufacturing.utils import get_modification_material_summary_context
+        summary_context = get_modification_material_summary_context(manufacturing_order)
+    else:
+        # استخدام الدالة المساعدة لتوليد البيانات
+        summary_context = get_material_summary_context(order)
 
     # الحصول على أسماء الخياطين من البطاقة المصنعية
     tailors_list = []
     try:
-        if hasattr(manufacturing_order, "factory_card"):
+        if is_modification and manufacturing_order.modification_request and manufacturing_order.modification_request.tailor:
+            tailors_list = [manufacturing_order.modification_request.tailor.name]
+        elif hasattr(manufacturing_order, "factory_card"):
             card = manufacturing_order.factory_card
             # Get tailor names from split distributions
             splits = card.splits.all().select_related("tailor")
@@ -5387,6 +5497,8 @@ def material_summary_view(request, pk):
 
     context = {
         "order": order,
+        "manufacturing_order": manufacturing_order,
+        "is_modification": is_modification,
         "materials_summary": summary_context["materials_summary"],
         "grand_total_quantity": summary_context["grand_total_quantity"],
         "grand_total_sewing": summary_context["grand_total_sewing"],
@@ -5401,11 +5513,17 @@ def material_summary_view(request, pk):
         ),  # أنواع التفصيل ذات السعر المخصص
     }
 
+    if is_modification:
+        context["modification_request"] = manufacturing_order.modification_request
+
     # Check if partial render requested (for Modal)
     if is_partial:
-        return render(
-            request, "manufacturing/partials/material_summary_content.html", context
+        template = (
+            "manufacturing/partials/modification_material_summary_content.html"
+            if is_modification
+            else "manufacturing/partials/material_summary_content.html"
         )
+        return render(request, template, context)
 
     return render(request, "manufacturing/material_summary_print.html", context)
 

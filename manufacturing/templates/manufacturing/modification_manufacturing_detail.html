@@ -1,0 +1,453 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% load i18n %}
+
+{% block title %}أمر تصنيع تعديل - {{ mfg_order.manufacturing_code }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.mod-header { background: linear-gradient(135deg, #e65100 0%, #ff8f00 100%); }
+.mod-header h4, .mod-header span { color: #fff; }
+.info-card .card-header { font-weight: 600; }
+.timeline-item { position: relative; padding-right: 2rem; border-right: 2px solid #dee2e6; margin-bottom: 1rem; }
+.timeline-item::before { content: ''; position: absolute; right: -7px; top: 4px; width: 12px; height: 12px; background: #fff; border: 2px solid #007bff; border-radius: 50%; }
+.timeline-item.completed::before { background: #28a745; border-color: #28a745; }
+.img-gallery img { transition: transform .2s; cursor: pointer; }
+.img-gallery img:hover { transform: scale(1.05); }
+.stat-card { text-align: center; padding: 1rem; }
+.stat-card .stat-value { font-size: 1.6rem; font-weight: 700; }
+.stat-card .stat-label { font-size: 0.8rem; color: #6c757d; }
+.fault-badge { font-size: 0.9rem; padding: 0.4em 0.8em; }
+@media print {
+    .no-print { display: none !important; }
+    .card { border: 1px solid #ccc !important; box-shadow: none !important; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <!-- ===== رأس الصفحة ===== -->
+    <div class="card mod-header shadow mb-4">
+        <div class="card-body py-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h4 class="m-0 d-flex align-items-center gap-2">
+                        <i class="fas fa-tools"></i>
+                        أمر تصنيع تعديل &ndash; {{ mfg_order.manufacturing_code }}
+                    </h4>
+                    <span class="small opacity-75 d-block mt-1">
+                        الطلب {{ mfg_order.order.order_number }} &bull; {{ modification.customer.name }}
+                    </span>
+                </div>
+                <div class="d-flex gap-2 no-print flex-wrap">
+                    {% if user.is_installation_manager or user.is_superuser %}
+                    <a href="{% url 'installations:modification_detail' modification.id %}" class="btn btn-sm btn-outline-light">
+                        <i class="fas fa-clipboard-list"></i> طلب التعديل
+                    </a>
+                    <a href="{% url 'installations:installation_detail' modification.installation.id %}" class="btn btn-sm btn-outline-light">
+                        <i class="fas fa-hammer"></i> التركيب
+                    </a>
+                    {% endif %}
+                    <button onclick="window.print()" class="btn btn-sm btn-outline-light">
+                        <i class="fas fa-print"></i> طباعة
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== بطاقات الإحصائيات ===== -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="stat-card">
+                    <div class="stat-value text-warning">{{ items|length }}</div>
+                    <div class="stat-label">عناصر التعديل</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="stat-card">
+                    <div class="stat-value text-primary">{{ total_meters|floatformat:1 }}</div>
+                    <div class="stat-label">إجمالي الأمتار</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="stat-card">
+                    <span class="stat-value {% if mfg_order.status == 'completed' or mfg_order.status == 'delivered' %}text-success{% elif mfg_order.status == 'in_progress' %}text-info{% else %}text-secondary{% endif %}">
+                        {{ mfg_order.get_status_display }}
+                    </span>
+                    <div class="stat-label">حالة التصنيع</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="stat-card">
+                    <div class="stat-value {% if days_remaining <= 0 %}text-danger{% elif days_remaining <= 1 %}text-warning{% else %}text-success{% endif %}">
+                        {% if days_remaining > 0 %}{{ days_remaining }} يوم{% elif days_remaining == 0 %}اليوم{% else %}متأخر{% endif %}
+                    </div>
+                    <div class="stat-label">مدة التسليم المتبقية</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- ===== العمود الرئيسي ===== -->
+        <div class="col-lg-8">
+
+            <!-- معلومات أمر التصنيع -->
+            <div class="card shadow info-card mb-4">
+                <div class="card-header py-2 bg-dark text-white">
+                    <h6 class="m-0"><i class="fas fa-industry me-1"></i> معلومات أمر التصنيع</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr><th style="width:40%">كود التصنيع:</th><td class="fw-bold">{{ mfg_order.manufacturing_code }}</td></tr>
+                                <tr><th>نوع الأمر:</th><td><span class="badge bg-warning text-dark">تعديل</span></td></tr>
+                                <tr><th>نوع التعديل:</th><td>{{ modification.modification_type }}</td></tr>
+                                <tr><th>الأولوية:</th>
+                                    <td><span class="badge {% if modification.priority == 'urgent' %}bg-danger{% elif modification.priority == 'high' %}bg-warning text-dark{% elif modification.priority == 'medium' %}bg-info{% else %}bg-secondary{% endif %}">
+                                        {{ modification.get_priority_display }}</span></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr><th style="width:45%">تاريخ إنشاء الأمر:</th><td>{{ mfg_order.order_date|date:"Y-m-d" }}</td></tr>
+                                <tr><th>تاريخ التسليم المتوقع:</th><td class="fw-bold">{{ mfg_order.expected_delivery_date|date:"Y-m-d" }}</td></tr>
+                                {% if mfg_order.completion_date %}
+                                <tr><th>تاريخ الإكمال:</th><td class="text-success">{{ mfg_order.completion_date|date:"Y-m-d H:i" }}</td></tr>
+                                {% endif %}
+                                <tr><th>أنشئ بواسطة:</th><td>{{ mfg_order.created_by.get_full_name|default:mfg_order.created_by.username|default:"—" }}</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    {% if mfg_order.description %}
+                    <hr class="my-2">
+                    <p class="mb-0 text-muted"><i class="fas fa-sticky-note me-1"></i> {{ mfg_order.description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- عناصر التعديل المطلوب تصنيعها -->
+            <div class="card shadow info-card mb-4">
+                <div class="card-header py-2 bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <h6 class="m-0"><i class="fas fa-list-alt me-1"></i> عناصر التعديل للتصنيع</h6>
+                    <span class="badge bg-dark">{{ items|length }} عنصر</span>
+                </div>
+                <div class="card-body p-0">
+                    {% if items %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>الغرفة</th>
+                                    <th>نوع القماش</th>
+                                    <th class="text-center">الأمتار الأصلية</th>
+                                    <th class="text-center">الأمتار المطلوبة</th>
+                                    <th>سبب التعديل</th>
+                                    <th>المسؤولية</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td class="text-muted">{{ forloop.counter }}</td>
+                                    <td class="fw-bold">{{ item.contract_curtain.room_name }}</td>
+                                    <td>
+                                        <span class="badge {% if item.fabric_type == 'light' %}bg-info{% elif item.fabric_type == 'heavy' %}bg-primary{% elif item.fabric_type == 'blackout' %}bg-dark{% else %}bg-secondary{% endif %}">
+                                            {{ item.get_fabric_type_display }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">{{ item.original_meters|default:"—"|floatformat:1 }} م</td>
+                                    <td class="text-center fw-bold text-primary">{{ item.effective_meters|default:"—"|floatformat:1 }} م</td>
+                                    <td class="small">{{ item.modification_reason }}</td>
+                                    <td>
+                                        {% if item.fault_party %}
+                                        <span class="badge fault-badge {% if item.fault_party == 'factory' %}bg-danger{% elif item.fault_party == 'salesperson' %}bg-warning text-dark{% elif item.fault_party == 'customer' %}bg-info{% elif item.fault_party == 'installation' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                            {{ item.get_fault_party_display }}
+                                        </span>
+                                        {% else %}<span class="text-muted">—</span>{% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if item.status == 'completed' %}bg-success{% elif item.status == 'manufacturing' %}bg-warning text-dark{% elif item.status == 'investigating' %}bg-info{% elif item.status == 'approved' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                            {{ item.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% if item.fault_details %}
+                                <tr>
+                                    <td></td>
+                                    <td colspan="7" class="small text-muted bg-light py-1 px-3">
+                                        <i class="fas fa-info-circle me-1"></i> {{ item.fault_details }}
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-secondary">
+                                <tr>
+                                    <th colspan="4" class="text-start">الإجمالي</th>
+                                    <th class="text-center">{{ total_meters|floatformat:1 }} م</th>
+                                    <th colspan="3"></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center p-4 text-muted">
+                        <i class="fas fa-info-circle fa-2x mb-2"></i>
+                        <p>لا توجد عناصر تصنيع</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- نتائج التحقيق -->
+            {% if modification.investigation_status == 'completed' or modification.investigation_notes %}
+            <div class="card shadow info-card mb-4">
+                <div class="card-header py-2 bg-info text-white">
+                    <h6 class="m-0"><i class="fas fa-search me-1"></i> نتائج التحقيق</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <strong>الجهة المسؤولة:</strong><br>
+                            {% if modification.overall_fault_party %}
+                                <span class="badge fault-badge {% if modification.overall_fault_party == 'factory' %}bg-danger{% elif modification.overall_fault_party == 'salesperson' %}bg-warning text-dark{% elif modification.overall_fault_party == 'customer' %}bg-info{% elif modification.overall_fault_party == 'installation' %}bg-primary{% else %}bg-secondary{% endif %} mt-1">
+                                    {{ modification.get_overall_fault_party_display }}
+                                </span>
+                            {% else %}<span class="text-muted">لم يحدد</span>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>المحقق:</strong><br>
+                            {% if modification.investigated_by %}
+                                <i class="fas fa-user-shield text-info me-1"></i>
+                                {{ modification.investigated_by.get_full_name|default:modification.investigated_by.username }}
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <strong>تاريخ التحقيق:</strong><br>
+                            {% if modification.investigation_date %}
+                                {{ modification.investigation_date|date:"Y-m-d H:i" }}
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </div>
+                    </div>
+                    {% if modification.investigation_notes %}
+                    <hr class="my-2">
+                    <p class="mb-0"><i class="fas fa-sticky-note text-info me-1"></i> {{ modification.investigation_notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- الصور -->
+            <div class="card shadow info-card mb-4">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0"><i class="fas fa-images text-info me-1"></i> صور التعديل</h6>
+                    <span class="badge bg-info">{{ images|length }}</span>
+                </div>
+                <div class="card-body">
+                    {% if images %}
+                    <div class="row g-2 img-gallery">
+                        {% for img in images %}
+                        <div class="col-md-3 col-sm-4 col-6">
+                            <a href="{{ img.image.url }}" target="_blank" title="{{ img.description|default:'صورة تعديل' }}">
+                                <img src="{{ img.image.url }}" class="img-fluid rounded shadow-sm" style="height:130px; width:100%; object-fit:cover;" alt="صورة تعديل">
+                            </a>
+                            {% if img.description %}
+                            <small class="d-block text-muted mt-1 text-truncate">{{ img.description }}</small>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-camera fa-2x mb-2 d-block opacity-50"></i>
+                        لا توجد صور مرفوعة
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ===== الشريط الجانبي ===== -->
+        <div class="col-lg-4">
+
+            <!-- معلومات العميل والطلب -->
+            <div class="card shadow mb-3">
+                <div class="card-header py-2 bg-primary text-white">
+                    <h6 class="m-0"><i class="fas fa-user me-1"></i> العميل والطلب</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr><th style="width:40%">العميل:</th><td>{{ modification.customer.name }}</td></tr>
+                        <tr><th>رقم الطلب:</th><td><a href="{% url 'orders:order_detail' mfg_order.order.id %}">{{ mfg_order.order.order_number }}</a></td></tr>
+                        <tr><th>الفرع:</th><td>{{ mfg_order.order.branch.name|default:"—" }}</td></tr>
+                        <tr><th>البائع:</th><td>{{ mfg_order.order.created_by.get_full_name|default:"—" }}</td></tr>
+                        {% if modification.estimated_cost %}
+                        <tr><th>التكلفة المتوقعة:</th><td class="fw-bold">{{ modification.estimated_cost|floatformat:2 }} ر.س</td></tr>
+                        {% endif %}
+                        <tr><th>موافقة العميل:</th>
+                            <td>{% if modification.customer_approval %}<span class="badge bg-success"><i class="fas fa-check"></i> نعم</span>{% else %}<span class="badge bg-secondary">لا</span>{% endif %}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- فريق التركيب -->
+            <div class="card shadow mb-3">
+                <div class="card-header py-2 bg-success text-white">
+                    <h6 class="m-0"><i class="fas fa-users me-1"></i> فريق التركيب</h6>
+                </div>
+                <div class="card-body">
+                    {% with inst=modification.installation %}
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr><th style="width:40%">تاريخ التركيب:</th><td>{{ inst.scheduled_date|date:"Y-m-d"|default:"—" }}</td></tr>
+                        <tr><th>الفريق:</th><td>{{ inst.team.name|default:"—" }}</td></tr>
+                        {% if inst.driver %}
+                        <tr><th>السائق:</th><td>{{ inst.driver.name }}</td></tr>
+                        {% endif %}
+                        <tr><th>الموقع:</th><td>{{ inst.location_address|default:"—"|truncatechars:40 }}</td></tr>
+                        <tr><th>حالة التركيب:</th>
+                            <td><span class="badge {% if inst.status == 'completed' %}bg-success{% elif inst.status == 'in_progress' %}bg-info{% else %}bg-secondary{% endif %}">{{ inst.get_status_display }}</span></td>
+                        </tr>
+                    </table>
+
+                    {% if technicians %}
+                    <hr class="my-2">
+                    <h6 class="small text-muted mb-2"><i class="fas fa-hard-hat me-1"></i> الفنيين</h6>
+                    {% for tech in technicians %}
+                    <div class="d-flex align-items-center gap-2 mb-2 p-2 bg-light rounded">
+                        <i class="fas fa-user-cog text-success"></i>
+                        <div>
+                            <div class="fw-bold small">{{ tech.name }}</div>
+                            <div class="text-muted" style="font-size:0.75rem">
+                                {{ tech.get_department_display }}
+                                {% if tech.phone %} &bull; {{ tech.phone }}{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <hr class="my-2">
+                    <div class="text-center text-muted small py-1">
+                        <i class="fas fa-user-slash"></i> لم يتم تعيين فنيين
+                    </div>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+
+            <!-- التفاصيل والوصف -->
+            <div class="card shadow mb-3">
+                <div class="card-header py-2 bg-purple text-white" style="background-color: #6f42c1 !important;">
+                    <h6 class="m-0"><i class="fas fa-user-tie me-1"></i> الخياط المنفذ</h6>
+                </div>
+                <div class="card-body">
+                    {% if modification.tailor %}
+                    <div class="d-flex align-items-center gap-2 mb-2 p-2 bg-light rounded">
+                        <i class="fas fa-user-tie text-purple" style="color: #6f42c1;"></i>
+                        <div>
+                            <div class="fw-bold">{{ modification.tailor.name }}</div>
+                            {% if modification.tailor.phone %}
+                            <div class="text-muted small">{{ modification.tailor.phone }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted small mb-2">
+                        <i class="fas fa-user-slash"></i> لم يتم تعيين خياط
+                    </div>
+                    {% endif %}
+                    <form method="post" class="mt-2">
+                        {% csrf_token %}
+                        <div class="input-group input-group-sm">
+                            <select name="tailor_id" class="form-select form-select-sm">
+                                <option value="">-- اختر الخياط --</option>
+                                {% for tailor in tailors %}
+                                <option value="{{ tailor.id }}" {% if modification.tailor_id == tailor.id %}selected{% endif %}>
+                                    {{ tailor.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-save"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- التفاصيل والوصف -->
+            <div class="card shadow mb-3">
+                <div class="card-header py-2">
+                    <h6 class="m-0"><i class="fas fa-align-right text-muted me-1"></i> وصف التعديل</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0" style="white-space: pre-wrap;">{{ modification.description }}</p>
+                </div>
+            </div>
+
+            <!-- سجل الأحداث -->
+            {% if event_logs %}
+            <div class="card shadow mb-3">
+                <div class="card-header py-2">
+                    <h6 class="m-0"><i class="fas fa-history text-muted me-1"></i> سجل الأحداث</h6>
+                </div>
+                <div class="card-body">
+                    {% for log in event_logs %}
+                    <div class="timeline-item {% if log.event_type == 'completion' %}completed{% endif %}">
+                        <div class="small text-muted">{{ log.created_at|date:"Y-m-d H:i" }}</div>
+                        <div class="small">{{ log.description }}</div>
+                        {% if log.user %}
+                        <div class="text-muted" style="font-size:0.7rem">{{ log.user.get_full_name|default:log.user.username }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- إجراءات سريعة -->
+            <div class="card shadow mb-3 no-print">
+                <div class="card-header py-2">
+                    <h6 class="m-0"><i class="fas fa-bolt text-warning me-1"></i> إجراءات سريعة</h6>
+                </div>
+                <div class="card-body d-grid gap-2">
+                    {% if user.is_installation_manager or user.is_superuser %}
+                    <a href="{% url 'installations:modification_detail' modification.id %}" class="btn btn-outline-warning btn-sm">
+                        <i class="fas fa-clipboard-list"></i> عرض طلب التعديل الكامل
+                    </a>
+                    <a href="{% url 'installations:upload_modification_images' modification.id %}" class="btn btn-outline-info btn-sm">
+                        <i class="fas fa-upload"></i> رفع صور
+                    </a>
+                    {% if mfg_order.status == 'in_progress' or mfg_order.status == 'ready_install' %}
+                    <form method="post" action="{% url 'installations:complete_modification' modification.id %}" onsubmit="return confirm('هل تم الانتهاء من جميع التعديلات؟')">
+                        {% csrf_token %}
+                        <button class="btn btn-success btn-sm w-100" type="submit">
+                            <i class="fas fa-check-circle"></i> إكمال التعديل
+                        </button>
+                    </form>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ title }} - نظام الخواجه{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-3 align-items-center">
+        <div class="col-md-8">
+            <h4 class="m-0 text-info">
+                <i class="fas fa-search me-2"></i>{{ title }}
+            </h4>
+            <small class="text-muted">
+                طلب #{{ modification_request.pk }} &mdash;
+                {{ modification_request.installation.order.order_number }} &mdash;
+                {{ modification_request.customer.name }}
+            </small>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'installations:modification_detail' modification_request.id %}" class="btn btn-sm btn-secondary">
+                <i class="fas fa-arrow-right"></i> تفاصيل الطلب
+            </a>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="row">
+            <!-- نموذج التحقيق الرئيسي -->
+            <div class="col-lg-8">
+                <!-- الخلاصة الكلية -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-2 bg-info text-white">
+                        <h6 class="m-0"><i class="fas fa-balance-scale"></i> نتيجة التحقيق الكلية</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">الجهة المسؤولة الكلية <span class="text-danger">*</span></label>
+                            {{ form.overall_fault_party }}
+                            {% if form.overall_fault_party.errors %}<div class="text-danger small">{{ form.overall_fault_party.errors }}</div>{% endif %}
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label fw-bold">ملاحظات ونتائج التحقيق</label>
+                            {{ form.investigation_notes }}
+                            {% if form.investigation_notes.errors %}<div class="text-danger small">{{ form.investigation_notes.errors }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- تفاصيل كل عنصر -->
+                <div class="card shadow mb-4">
+                    <div class="card-header py-2 bg-dark text-white">
+                        <h6 class="m-0"><i class="fas fa-list"></i> تحديد المسؤولية لكل عنصر ({{ items|length }} عنصر)</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if items %}
+                        <div class="accordion" id="itemsAccordion">
+                            {% for item in items %}
+                            <div class="accordion-item border-0 border-bottom">
+                                <h2 class="accordion-header" id="heading_{{ item.id }}">
+                                    <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button"
+                                            data-bs-toggle="collapse" data-bs-target="#collapse_{{ item.id }}">
+                                        <span class="me-2 badge
+                                            {% if item.fault_party %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                            {% if item.fault_party %}{{ item.get_fault_party_display }}{% else %}لم يحدد{% endif %}
+                                        </span>
+                                        <strong>{{ item.contract_curtain.room_name }}</strong>
+                                        <span class="ms-2 text-muted">— {{ item.get_fabric_type_display }}</span>
+                                        {% if item.original_meters %}
+                                            <span class="ms-2 badge bg-light text-dark border">{{ item.original_meters|floatformat:1 }} م</span>
+                                        {% endif %}
+                                    </button>
+                                </h2>
+                                <div id="collapse_{{ item.id }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}"
+                                     data-bs-parent="#itemsAccordion">
+                                    <div class="accordion-body bg-light">
+                                        <div class="alert alert-secondary py-2 mb-3">
+                                            <strong>سبب التعديل:</strong> {{ item.modification_reason }}
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label fw-bold">الجهة المسؤولة</label>
+                                                <select class="form-select" name="item_{{ item.id }}_fault_party">
+                                                    <option value="">-- اختر --</option>
+                                                    <option value="factory" {% if item.fault_party == 'factory' %}selected{% endif %}>المصنع</option>
+                                                    <option value="salesperson" {% if item.fault_party == 'salesperson' %}selected{% endif %}>البائع</option>
+                                                    <option value="customer" {% if item.fault_party == 'customer' %}selected{% endif %}>العميل</option>
+                                                    <option value="installation" {% if item.fault_party == 'installation' %}selected{% endif %}>التركيب</option>
+                                                    <option value="other" {% if item.fault_party == 'other' %}selected{% endif %}>أخرى</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-3">
+                                                <label class="form-label fw-bold">الأمتار الجديدة (م)</label>
+                                                <input type="number" step="0.01" min="0"
+                                                       class="form-control"
+                                                       name="item_{{ item.id }}_new_meters"
+                                                       value="{{ item.new_meters|default:'' }}"
+                                                       placeholder="اتركه فارغاً للاستخدام الأصلي">
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">تفاصيل وملاحظات التحقيق</label>
+                                            <textarea class="form-control" rows="2"
+                                                      name="item_{{ item.id }}_fault_details"
+                                                      placeholder="اكتب تفاصيل ما تم التحقيق فيه...">{{ item.fault_details }}</textarea>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox"
+                                                   name="item_{{ item.id }}_needs_manufacturing"
+                                                   id="mfg_{{ item.id }}"
+                                                   {% if item.needs_manufacturing %}checked{% endif %}>
+                                            <label class="form-check-label fw-bold" for="mfg_{{ item.id }}">
+                                                <i class="fas fa-industry text-danger"></i> يحتاج تصنيع في المصنع
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center p-4 text-muted">
+                            <i class="fas fa-info-circle"></i> لا توجد عناصر مسجلة في هذا الطلب
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-info text-white px-4">
+                        <i class="fas fa-save"></i> حفظ نتائج التحقيق
+                    </button>
+                    <a href="{% url 'installations:modification_detail' modification_request.id %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> إلغاء
+                    </a>
+                </div>
+            </div>
+
+            <!-- شريط جانبي -->
+            <div class="col-lg-4">
+                <div class="card shadow mb-3">
+                    <div class="card-header py-2 bg-warning text-dark">
+                        <h6 class="m-0"><i class="fas fa-exclamation-circle"></i> تعليمات التحقيق</h6>
+                    </div>
+                    <div class="card-body small">
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-2"><i class="fas fa-check text-success me-1"></i> حدد الجهة المسؤولة لكل عنصر على حدة</li>
+                            <li class="mb-2"><i class="fas fa-check text-success me-1"></i> إذا تغير طول القماش المطلوب أدخل الأمتار الجديدة</li>
+                            <li class="mb-2"><i class="fas fa-check text-success me-1"></i> حدد "الجهة المسؤولة الكلية" في الأعلى</li>
+                            <li class="mb-2"><i class="fas fa-check text-success me-1"></i> ضع علامة على العناصر التي تحتاج إعادة تصنيع</li>
+                            <li><i class="fas fa-info-circle text-info me-1"></i> بعد الحفظ يمكنك الموافقة وإرسال المصنع من تفاصيل الطلب</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card shadow mb-3">
+                    <div class="card-header py-2">
+                        <h6 class="m-0 text-muted">معلومات التركيب</h6>
+                    </div>
+                    <div class="card-body small">
+                        <div><strong>الطلب:</strong> {{ modification_request.installation.order.order_number }}</div>
+                        <div><strong>العميل:</strong> {{ modification_request.customer.name }}</div>
+                        <div><strong>نوع التعديل:</strong> {{ modification_request.modification_type }}</div>
+                        <div><strong>الأولوية:</strong> {{ modification_request.get_priority_display }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+{% block extra_css %}
+<style>
+.accordion-button:not(.collapsed) { background-color: #e8f4f8; color: #0c6378; }
+.accordion-button { font-size: 0.92rem; }
+</style>
+{% endblock %}

@@ -179,6 +179,9 @@
                                                 <div class="d-flex align-items-center justify-content-center">
                                                     <a href="{% url 'manufacturing:order_detail' card.manufacturing_order.pk %}"
                                                        class="fw-bold text-decoration-none">{{ card.order_number }}</a>
+                                                    {% if card.manufacturing_order.order_type == 'modification' %}
+                                                        <span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;">تعديل</span>
+                                                    {% endif %}
                                                     <div class="ms-2 d-flex gap-1">
                                                         <button type="button"
                                                                 class="btn btn-sm btn-outline-warning py-0 px-1 btn-sync-card"
@@ -214,7 +217,14 @@
                                                         </div>
                                                     {% endif %}
                                                 {% empty %}
-                                                    <span class="text-muted">-</span>
+                                                    {% if card.manufacturing_order.order_type == 'modification' and card.manufacturing_order.modification_request and card.manufacturing_order.modification_request.tailor %}
+                                                        <div class="small mb-1">
+                                                            <strong>{{ card.manufacturing_order.modification_request.tailor.name }}</strong>
+                                                            <span class="badge bg-warning text-dark border ms-1" style="font-size:0.65rem;">تعديل</span>
+                                                        </div>
+                                                    {% else %}
+                                                        <span class="text-muted">-</span>
+                                                    {% endif %}
                                                 {% endfor %}
                                             </td>
                                             <td class="fw-bold">

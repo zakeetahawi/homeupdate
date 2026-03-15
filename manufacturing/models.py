@@ -392,9 +392,10 @@ class ManufacturingOrder(SoftDeleteMixin, models.Model):
     @property
     def manufacturing_code(self):
         """إرجاع رقم طلب التصنيع الموحد (رقم الطلب + M)"""
-        if self.order and self.order.order_number:
-            return f"{self.order.order_number}-M"
-        return f"#{self.id}-M"  # للبيانات القديمة التي لا تحتوي على order_number
+        base = self.order.order_number if self.order and self.order.order_number else f"#{self.id}"
+        if self.order_type == "modification":
+            return f"{base}-M-تعديل"
+        return f"{base}-M"
 
     def get_absolute_url(self):
         """إرجاع رابط تفاصيل أمر التصنيع باستخدام كود التصنيع"""

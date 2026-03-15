@@ -460,8 +460,14 @@ class FactoryCard(models.Model):
         Calculate total billable meters and tailoring costs from contract materials.
         حساب إجمالي الأمتار وتكاليف التفصيل من مواد العقد.
         كل نوع تفصيل له سعر مخصص (بالمتر أو بالعدد).
+        For modification orders: only count modification items' meters.
         """
         try:
+            # Check if this is a modification order
+            mfg_order = self.manufacturing_order
+            if mfg_order.order_type == "modification" and mfg_order.modification_request_id:
+                return self._calculate_modification_meters()
+
             from orders.contract_models import ContractCurtain
 
             curtains = ContractCurtain.objects.filter(
@@ -572,6 +578,105 @@ class FactoryCard(models.Model):
                 f"Error calculating total meters for {self.order_number}: {e}"
             )
             return self.total_billable_meters
+
+    def _calculate_modification_meters(self):
+        """
+        Calculate meters for modification orders from ModificationItem entries only.
+        حساب الأمتار لأوامر التعديل من عناصر التعديل فقط (وليس كل أقمشة الطلب الأصلي).
+        """
+        from installations.models import ModificationItem
+
+        mod_request = self.manufacturing_order.modification_request
+        items = ModificationItem.objects.filter(
+            modification_request=mod_request,
+            needs_manufacturing=True,
+        ).exclude(status="cancelled").select_related("contract_curtain")
+
+        acct_settings = FactoryAccountingSettings.get_settings()
+
+        # Load tailoring type pricing
+        pricing_map = {}
+        for p in TailoringTypePricing.objects.filter(
+            is_active=True
+        ).select_related("tailoring_type"):
+            pricing_map[p.tailoring_type.value] = p
+            pricing_map[p.tailoring_type.display_name] = p
+
+        default_rate = acct_settings.default_rate_per_meter
+
+        total_actual = Decimal("0.00")
+        total_tailoring_cost = Decimal("0.00")
+        breakdown = {}
+
+        for item in items:
+            meters = item.effective_meters
+            if not meters:
+                continue
+            meters = Decimal(str(meters))
+            total_actual += meters
+
+            # Get the original CurtainFabric for tailoring_type and pieces
+            fabric = item.contract_curtain.fabrics.filter(
+                fabric_type=item.fabric_type,
+            ).first()
+
+            t_type = ""
+            t_display = ""
+            pieces = 1
+            if fabric:
+                t_type = fabric.tailoring_type or ""
+                t_display = fabric.get_tailoring_type_display() or t_type
+                pieces = int(fabric.pieces) if fabric.pieces else 1
+
+            pricing = pricing_map.get(t_type) or pricing_map.get(t_display)
+
+            if pricing:
+                rate = pricing.rate
+                method = pricing.calc_method
+                if method == "per_piece":
+                    cost = Decimal(str(pieces)) * rate
+                else:
+                    cost = meters * rate
+            else:
+                rate = default_rate
+                method = "per_meter"
+                cost = meters * rate
+
+            total_tailoring_cost += cost
+
+            key = t_type or "unspecified"
+            if key not in breakdown:
+                breakdown[key] = {
+                    "display": t_display or "بدون تفصيل",
+                    "method": method,
+                    "rate": float(rate),
+                    "meters": 0.0,
+                    "pieces": 0,
+                    "cost": 0.0,
+                }
+            breakdown[key]["meters"] += float(meters)
+            breakdown[key]["pieces"] += pieces
+            breakdown[key]["cost"] += float(cost)
+
+        self.total_billable_meters = total_tailoring_cost
+        self.total_tailoring_cost = total_tailoring_cost
+        self.tailoring_cost_breakdown = breakdown
+
+        cutter_rate = acct_settings.default_cutter_rate
+        self.cutter_price = cutter_rate
+        self.total_cutter_cost = total_actual * cutter_rate
+
+        self.save(
+            update_fields=[
+                "total_billable_meters",
+                "total_tailoring_cost",
+                "tailoring_cost_breakdown",
+                "cutter_price",
+                "total_cutter_cost",
+                "updated_at",
+            ]
+        )
+        return total_tailoring_cost
 
     def get_production_user_info(self):
         """

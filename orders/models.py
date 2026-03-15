@@ -2061,6 +2061,20 @@ class OrderItem(SoftDeleteMixin, models.Model):
 
     rejection_reason = models.TextField(blank=True, verbose_name="سبب الرفض")
 
+    # حالة التعديل
+    modification_status = models.CharField(
+        max_length=20,
+        choices=[
+            ("none", "لا يوجد"),
+            ("pending", "بانتظار التعديل"),
+            ("in_progress", "قيد التعديل"),
+            ("completed", "تم التعديل"),
+        ],
+        default="none",
+        verbose_name="حالة التعديل",
+        db_index=True,
+    )
+
     # إضافة tracker لتتبع التغييرات
     tracker = FieldTracker(
         fields=[

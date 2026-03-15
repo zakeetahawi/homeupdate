@@ -179,3 +179,166 @@ def get_material_summary_context(order: Any) -> Dict[str, Any]:
         "grand_total_sewing": grand_total_sewing,
         "custom_priced_types": custom_priced_types,
     }
+
+
+def get_modification_material_summary_context(manufacturing_order) -> Dict[str, Any]:
+    """
+    Generate material summary context for a modification order.
+    بطاقة عناصر التعديل: تعرض فقط عناصر التعديل وليس كل أقمشة الطلب الأصلي.
+    """
+    from factory_accounting.models import (
+        FactoryAccountingSettings,
+        TailoringTypePricing,
+    )
+    from installations.models import ModificationItem
+
+    mod_request = manufacturing_order.modification_request
+    if not mod_request:
+        return {
+            "materials_summary": [],
+            "grand_total_quantity": 0.0,
+            "grand_total_sewing": 0.0,
+            "custom_priced_types": set(),
+        }
+
+    items = (
+        ModificationItem.objects.filter(
+            modification_request=mod_request,
+            needs_manufacturing=True,
+        )
+        .exclude(status="cancelled")
+        .select_related("contract_curtain", "order_item")
+    )
+
+    # Load tailoring type pricing
+    pricing_map = {}
+    custom_priced_types = set()
+    for p in TailoringTypePricing.objects.filter(is_active=True).select_related(
+        "tailoring_type"
+    ):
+        pricing_map[p.tailoring_type.value] = p
+        pricing_map[p.tailoring_type.display_name] = p
+        custom_priced_types.add(p.tailoring_type.value)
+        custom_priced_types.add(p.tailoring_type.display_name)
+
+    try:
+        acct_settings = FactoryAccountingSettings.get_settings()
+        default_rate = float(acct_settings.default_rate_per_meter)
+    except Exception:
+        default_rate = 1.0
+
+    materials_map = {}
+
+    for item in items:
+        # Get the original CurtainFabric for fabric name, tailoring_type, etc.
+        fabric = item.contract_curtain.fabrics.filter(
+            fabric_type=item.fabric_type,
+        ).first()
+
+        if not fabric:
+            continue
+
+        name = fabric.display_name
+        if not name:
+            name = f"{item.get_fabric_type_display()} - {item.contract_curtain.room_name}"
+
+        meters = float(item.effective_meters or 0)
+        if meters == 0:
+            continue
+
+        pieces = int(fabric.pieces) if fabric.pieces else 1
+
+        if name not in materials_map:
+            materials_map[name] = {
+                "name": name,
+                "type": "fabric",
+                "total_quantity": 0.0,
+                "sewing_quantity": 0.0,
+                "unit": "متر",
+                "usages": [],
+                "tailoring_types": set(),
+                "tailoring_types_custom": set(),
+                "tailoring_types_default": set(),
+                "permits": set(),
+                "bags": set(),
+                "fabric_type": item.fabric_type,
+                "room_name": item.contract_curtain.room_name,
+                "modification_reason": item.modification_reason,
+            }
+
+        materials_map[name]["total_quantity"] += meters
+
+        # Tailoring type pricing
+        t_type_raw = fabric.tailoring_type or ""
+        t_type_display = fabric.get_tailoring_type_display() or t_type_raw
+        pricing = pricing_map.get(t_type_raw) or pricing_map.get(t_type_display)
+
+        if pricing:
+            rate = float(pricing.rate)
+            method = pricing.calc_method
+            if method == "per_piece":
+                sewing_cost = pieces * rate
+            else:
+                sewing_cost = meters * rate
+            is_custom = True
+        else:
+            rate = default_rate
+            sewing_cost = meters * rate
+            is_custom = False
+
+        materials_map[name]["sewing_quantity"] += sewing_cost
+
+        if t_type_display:
+            materials_map[name]["tailoring_types"].add(t_type_display)
+            if is_custom:
+                materials_map[name]["tailoring_types_custom"].add(t_type_display)
+            else:
+                materials_map[name]["tailoring_types_default"].add(t_type_display)
+
+        # Usage description
+        type_display = fabric.get_fabric_type_display()
+        room = item.contract_curtain.room_name
+        usage_desc = f"{type_display} في {room}"
+        materials_map[name]["usages"].append(usage_desc)
+
+        # Manufacturing data (permits, bags)
+        try:
+            if item.manufacturing_order_item:
+                m_item = item.manufacturing_order_item
+                if m_item.cutting_permit_number:
+                    materials_map[name]["permits"].add(m_item.cutting_permit_number)
+                if m_item.bag_number:
+                    materials_map[name]["bags"].add(m_item.bag_number)
+        except Exception:
+            pass
+
+    # Transform to list
+    materials_summary = []
+    grand_total_quantity = 0.0
+    grand_total_sewing = 0.0
+
+    for name, data in materials_map.items():
+        unique_usages = sorted(list(set(data["usages"])))
+        data["smart_description"] = "، ".join(unique_usages)
+        data["tailoring_types_list"] = sorted(list(data["tailoring_types"]))
+        data["tailoring_types_custom_list"] = sorted(
+            list(data["tailoring_types_custom"])
+        )
+        data["tailoring_types_default_list"] = sorted(
+            list(data["tailoring_types_default"])
+        )
+        data["permits_str"] = ", ".join(sorted(list(data["permits"])))
+        data["bags_str"] = ", ".join(sorted(list(data["bags"])))
+
+        grand_total_quantity += data["total_quantity"]
+        grand_total_sewing += data["sewing_quantity"]
+        materials_summary.append(data)
+
+    materials_summary.sort(key=lambda x: x["name"])
+
+    return {
+        "materials_summary": materials_summary,
+        "grand_total_quantity": grand_total_quantity,
+        "grand_total_sewing": grand_total_sewing,
+        "custom_priced_types": custom_priced_types,
+    }

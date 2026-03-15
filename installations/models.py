@@ -731,7 +731,7 @@ class InstallationSchedule(SoftDeleteMixin, models.Model):
 
 
 class ModificationRequest(SoftDeleteMixin, models.Model):
-    """نموذج طلب التعديل"""
+    """نموذج طلب التعديل - يمثل طلب تعديل على تركيب معين"""
 
     PRIORITY_CHOICES = [
         ("low", _("منخفض")),
@@ -740,14 +740,42 @@ class ModificationRequest(SoftDeleteMixin, models.Model):
         ("urgent", _("عاجل")),
     ]
 
+    INVESTIGATION_STATUS_CHOICES = [
+        ("pending", _("بانتظار التحقيق")),
+        ("in_progress", _("قيد التحقيق")),
+        ("completed", _("تم التحقيق")),
+    ]
+
+    OVERALL_FAULT_CHOICES = [
+        ("factory", _("المصنع")),
+        ("salesperson", _("البائع")),
+        ("customer", _("العميل")),
+        ("installation", _("التركيب")),
+        ("other", _("أخرى")),
+    ]
+
+    STATUS_CHOICES = [
+        ("pending", _("جديد")),
+        ("investigating", _("قيد التحقيق")),
+        ("approved", _("تمت الموافقة")),
+        ("manufacturing", _("قيد التصنيع")),
+        ("completed", _("مكتمل")),
+        ("cancelled", _("ملغي")),
+    ]
+
     installation = models.ForeignKey(
-        InstallationSchedule, on_delete=models.CASCADE, verbose_name=_("التركيب")
+        InstallationSchedule, on_delete=models.CASCADE, verbose_name=_("التركيب"),
+        related_name="modification_requests",
     )
     customer = models.ForeignKey(
-        "customers.Customer", on_delete=models.CASCADE, verbose_name=_("العميل")
+        "customers.Customer", on_delete=models.CASCADE, verbose_name=_("العميل"),
+        related_name="modification_requests",
     )
     modification_type = models.CharField(_("نوع التعديل"), max_length=100)
     description = models.TextField(_("تفاصيل التعديل"))
+    status = models.CharField(
+        _("حالة الطلب"), max_length=20, choices=STATUS_CHOICES, default="pending"
+    )
     priority = models.CharField(
         _("الأولوية"), max_length=20, choices=PRIORITY_CHOICES, default="medium"
     )
@@ -755,6 +783,34 @@ class ModificationRequest(SoftDeleteMixin, models.Model):
         _("التكلفة المتوقعة"), max_digits=10, decimal_places=2, default=0
     )
     customer_approval = models.BooleanField(_("موافقة العميل"), default=False)
+
+    # حقول التحقيق
+    investigation_status = models.CharField(
+        _("حالة التحقيق"), max_length=20, choices=INVESTIGATION_STATUS_CHOICES,
+        default="pending",
+    )
+    investigated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name=_("تم التحقيق بواسطة"), related_name="investigated_modifications",
+    )
+    investigation_date = models.DateTimeField(
+        _("تاريخ التحقيق"), null=True, blank=True
+    )
+    investigation_notes = models.TextField(_("ملاحظات التحقيق"), blank=True)
+    overall_fault_party = models.CharField(
+        _("الجهة المسؤولة"), max_length=20, choices=OVERALL_FAULT_CHOICES,
+        blank=True,
+    )
+
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name=_("تم الإنشاء بواسطة"), related_name="created_modifications",
+    )
+    tailor = models.ForeignKey(
+        "factory_accounting.Tailor", on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name=_("الخياط"), related_name="modification_requests",
+        help_text=_("الخياط الذي قام بتنفيذ التعديل"),
+    )
     created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
     updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
 
@@ -762,13 +818,123 @@ class ModificationRequest(SoftDeleteMixin, models.Model):
         verbose_name = _("طلب تعديل")
         verbose_name_plural = _("طلبات التعديل")
         ordering = ["-created_at"]
+        permissions = [
+            ("can_investigate_modification", "يمكنه التحقيق واعتماد التعديلات"),
+        ]
         indexes = [
             models.Index(fields=["installation", "priority"], name="modreq_inst_pri_idx"),
             models.Index(fields=["-created_at"], name="modreq_created_idx"),
+            models.Index(fields=["status"], name="modreq_status_idx"),
+            models.Index(fields=["customer", "-created_at"], name="modreq_cust_crtd_idx"),
         ]
 
     def __str__(self):
         return f"طلب تعديل #{self.pk} - تركيب {self.installation_id}"
+
+    @property
+    def order(self):
+        """الطلب الأصلي"""
+        return self.installation.order
+
+    @property
+    def items_needing_manufacturing(self):
+        """العناصر التي تحتاج تصنيع"""
+        return self.modification_items.filter(needs_manufacturing=True)
+
+
+class ModificationItem(models.Model):
+    """عنصر تعديل - يحدد أي ستارة وأي قماش بالضبط يحتاج تعديل"""
+
+    FABRIC_TYPE_CHOICES = [
+        ("light", _("قماش خفيف")),
+        ("heavy", _("قماش ثقيل")),
+        ("blackout", _("بلاك أوت")),
+    ]
+
+    FAULT_PARTY_CHOICES = [
+        ("factory", _("المصنع")),
+        ("salesperson", _("البائع")),
+        ("customer", _("العميل")),
+        ("installation", _("التركيب")),
+        ("other", _("أخرى")),
+    ]
+
+    ITEM_STATUS_CHOICES = [
+        ("pending", _("بانتظار التحقيق")),
+        ("investigating", _("قيد التحقيق")),
+        ("approved", _("تمت الموافقة للتصنيع")),
+        ("manufacturing", _("قيد التصنيع")),
+        ("completed", _("مكتمل")),
+        ("cancelled", _("ملغي")),
+    ]
+
+    modification_request = models.ForeignKey(
+        ModificationRequest, on_delete=models.CASCADE, verbose_name=_("طلب التعديل"),
+        related_name="modification_items",
+    )
+    contract_curtain = models.ForeignKey(
+        "orders.ContractCurtain", on_delete=models.CASCADE, verbose_name=_("الستارة"),
+        related_name="modification_items",
+    )
+    fabric_type = models.CharField(
+        _("نوع القماش"), max_length=20, choices=FABRIC_TYPE_CHOICES,
+    )
+    order_item = models.ForeignKey(
+        "orders.OrderItem", on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name=_("عنصر الطلب الأصلي"), related_name="modification_items",
+    )
+    modification_reason = models.TextField(_("سبب التعديل"))
+    fault_party = models.CharField(
+        _("الجهة المسؤولة"), max_length=20, choices=FAULT_PARTY_CHOICES, blank=True,
+    )
+    fault_details = models.TextField(_("تفاصيل التحقيق"), blank=True)
+    fault_resolved = models.BooleanField(_("تم حسم المسؤولية"), default=False)
+    needs_manufacturing = models.BooleanField(_("يحتاج تصنيع"), default=True)
+    new_meters = models.DecimalField(
+        _("الكمية الجديدة (متر)"), max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text=_("اتركه فارغاً لاستخدام الكمية الأصلية"),
+    )
+    status = models.CharField(
+        _("الحالة"), max_length=20, choices=ITEM_STATUS_CHOICES, default="pending",
+    )
+    manufacturing_order_item = models.ForeignKey(
+        "manufacturing.ManufacturingOrderItem", on_delete=models.SET_NULL,
+        null=True, blank=True, verbose_name=_("عنصر أمر التصنيع"),
+        related_name="modification_source",
+    )
+    created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
+    updated_at = models.DateTimeField(_("تاريخ التحديث"), auto_now=True)
+
+    class Meta:
+        verbose_name = _("عنصر تعديل")
+        verbose_name_plural = _("عناصر التعديل")
+        ordering = ["contract_curtain__sequence"]
+        indexes = [
+            models.Index(fields=["modification_request", "status"], name="moditem_req_sts_idx"),
+            models.Index(fields=["order_item"], name="moditem_orderitem_idx"),
+        ]
+
+    def __str__(self):
+        return f"تعديل {self.get_fabric_type_display()} - {self.contract_curtain.room_name}"
+
+    @property
+    def curtain_room(self):
+        return self.contract_curtain.room_name
+
+    @property
+    def original_meters(self):
+        """الأمتار الأصلية من CurtainFabric"""
+        fabric = self.contract_curtain.fabrics.filter(
+            fabric_type=self.fabric_type,
+        ).first()
+        if fabric:
+            return fabric.meters
+        return None
+
+    @property
+    def effective_meters(self):
+        """الأمتار الفعلية (الجديدة أو الأصلية)"""
+        return self.new_meters or self.original_meters
 
 
 class ModificationImage(models.Model):
@@ -791,7 +957,7 @@ class ModificationImage(models.Model):
 
 
 class ModificationManufacturingOrder(SoftDeleteMixin, models.Model):
-    """نموذج أمر التصنيع للتعديلات — مختلف عن manufacturing.ManufacturingOrder"""
+    """نموذج أمر التصنيع للتعديلات — LEGACY: يُستخدم ManufacturingOrder الرئيسي بدلاً منه"""
 
     ORDER_TYPE_CHOICES = [
         ("new", _("جديد")),

@@ -16,6 +16,7 @@ from .models import (
     ModificationManufacturingOrder,
     ModificationErrorAnalysis,
     ModificationImage,
+    ModificationItem,
     ModificationReport,
     ModificationRequest,
     ReceiptMemo,
@@ -141,6 +142,108 @@ class ModificationRequestForm(forms.ModelForm):
             ),
             "customer_approval": forms.CheckboxInput(
                 attrs={"class": "form-check-input"}
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["estimated_cost"].required = False
+
+
+class ModificationItemForm(forms.ModelForm):
+    """نموذج عنصر التعديل - يحدد أي ستارة وأي قماش"""
+
+    class Meta:
+        model = ModificationItem
+        fields = [
+            "contract_curtain",
+            "fabric_type",
+            "modification_reason",
+            "needs_manufacturing",
+            "new_meters",
+        ]
+        widgets = {
+            "contract_curtain": forms.Select(attrs={"class": "form-control"}),
+            "fabric_type": forms.Select(attrs={"class": "form-control"}),
+            "modification_reason": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 2,
+                    "placeholder": "سبب التعديل لهذا القماش...",
+                }
+            ),
+            "needs_manufacturing": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+            "new_meters": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "step": "0.01",
+                    "min": "0",
+                    "placeholder": "اتركه فارغاً لاستخدام الكمية الأصلية",
+                }
+            ),
+        }
+
+    def __init__(self, *args, order=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if order:
+            self.fields["contract_curtain"].queryset = order.contract_curtains.all()
+            self.fields["contract_curtain"].label_from_instance = (
+                lambda obj: f"{obj.room_name} (ستارة {obj.sequence})"
+            )
+
+
+class ModificationInvestigationForm(forms.ModelForm):
+    """نموذج التحقيق في طلب التعديل"""
+
+    class Meta:
+        model = ModificationRequest
+        fields = [
+            "investigation_notes",
+            "overall_fault_party",
+        ]
+        widgets = {
+            "investigation_notes": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                    "placeholder": "ملاحظات التحقيق...",
+                }
+            ),
+            "overall_fault_party": forms.Select(attrs={"class": "form-control"}),
+        }
+
+
+class ModificationItemInvestigationForm(forms.ModelForm):
+    """نموذج التحقيق في عنصر تعديل واحد"""
+
+    class Meta:
+        model = ModificationItem
+        fields = [
+            "fault_party",
+            "fault_details",
+            "fault_resolved",
+            "needs_manufacturing",
+            "new_meters",
+        ]
+        widgets = {
+            "fault_party": forms.Select(attrs={"class": "form-control"}),
+            "fault_details": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 2,
+                    "placeholder": "تفاصيل التحقيق...",
+                }
+            ),
+            "fault_resolved": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+            "needs_manufacturing": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
+            "new_meters": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.01", "min": "0"}
             ),
         }
 

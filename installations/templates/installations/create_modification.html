@@ -2,197 +2,201 @@
 {% load static %}
 {% block title %}{{ title }} - نظام الخواجه{% endblock %}
 {% block content %}
-    <div class="container-fluid">
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-12 d-flex justify-content-between align-items-center">
+            <h4 class="m-0 text-warning"><i class="fas fa-tools me-2"></i>{{ title }}</h4>
+            <a href="{% url 'installations:installation_detail' installation.id %}" class="btn btn-sm btn-secondary">
+                <i class="fas fa-arrow-right"></i> العودة للتركيب
+            </a>
+        </div>
+    </div>
+
+    <!-- معلومات الطلب والعميل -->
+    <div class="alert alert-info mb-3">
         <div class="row">
-            <div class="col-12">
+            <div class="col-md-4"><strong>رقم الطلب:</strong> {{ order.order_number }}</div>
+            <div class="col-md-4"><strong>العميل:</strong> {{ order.customer.name }}</div>
+            <div class="col-md-4"><strong>تاريخ التركيب:</strong> {{ installation.scheduled_date|date:"Y-m-d" }}</div>
+        </div>
+    </div>
+
+    <form method="post" id="modificationForm">
+        {% csrf_token %}
+        <div class="row">
+            <!-- النموذج الرئيسي -->
+            <div class="col-lg-8">
                 <div class="card shadow mb-4">
-                    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                        <h6 class="m-0 font-weight-bold text-warning">
-                            <i class="fas fa-tools"></i>
-                            {{ title }}
-                        </h6>
-                        <a href="{% url 'installations:installation_detail' installation.id %}"
-                           class="btn btn-sm btn-secondary">
-                            <i class="fas fa-arrow-right"></i>
-                            العودة للتركيب
-                        </a>
+                    <div class="card-header bg-warning text-dark py-2">
+                        <h6 class="m-0"><i class="fas fa-clipboard"></i> بيانات طلب التعديل وتحديد الأقمشة</h6>
                     </div>
                     <div class="card-body">
+                        <!-- بيانات الطلب الأساسية -->
                         <div class="row">
-                            <div class="col-md-8">
-                                <form method="post">
-                                    {% csrf_token %}
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="{{ form.modification_type.id_for_label }}" class="form-label">
-                                                    <strong>نوع التعديل</strong>
-                                                </label>
-                                                {{ form.modification_type }}
-                                                {% if form.modification_type.errors %}
-                                                    <div class="invalid-feedback d-block">{{ form.modification_type.errors }}</div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="{{ form.priority.id_for_label }}" class="form-label">
-                                                    <strong>الأولوية</strong>
-                                                </label>
-                                                {{ form.priority }}
-                                                {% if form.priority.errors %}<div class="invalid-feedback d-block">{{ form.priority.errors }}</div>{% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="{{ form.description.id_for_label }}" class="form-label">
-                                            <strong>تفاصيل التعديل</strong>
-                                        </label>
-                                        {{ form.description }}
-                                        {% if form.description.errors %}<div class="invalid-feedback d-block">{{ form.description.errors }}</div>{% endif %}
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <label for="{{ form.estimated_cost.id_for_label }}" class="form-label">
-                                                    <strong>التكلفة المتوقعة</strong>
-                                                </label>
-                                                {{ form.estimated_cost }}
-                                                {% if form.estimated_cost.errors %}
-                                                    <div class="invalid-feedback d-block">{{ form.estimated_cost.errors }}</div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group">
-                                                <div class="form-check mt-4">
-                                                    {{ form.customer_approval }}
-                                                    <label class="form-check-label"
-                                                           for="{{ form.customer_approval.id_for_label }}">
-                                                        <strong>موافقة العميل</strong>
-                                                    </label>
-                                                    {% if form.customer_approval.errors %}
-                                                        <div class="invalid-feedback d-block">{{ form.customer_approval.errors }}</div>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <button type="submit" class="btn btn-warning">
-                                            <i class="fas fa-save"></i>
-                                            إنشاء طلب التعديل
-                                        </button>
-                                        <a href="{% url 'installations:installation_detail' installation.id %}"
-                                           class="btn btn-secondary">
-                                            <i class="fas fa-times"></i>
-                                            إلغاء
-                                        </a>
-                                    </div>
-                                </form>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">نوع التعديل <span class="text-danger">*</span></label>
+                                {{ form.modification_type }}
+                                {% if form.modification_type.errors %}<div class="text-danger small">{{ form.modification_type.errors }}</div>{% endif %}
                             </div>
-                            <div class="col-md-4">
-                                <div class="card border-left-warning">
-                                    <div class="card-body">
-                                        <h6 class="card-title text-warning">
-                                            <i class="fas fa-info-circle"></i>
-                                            معلومات التركيب
-                                        </h6>
-                                        <div class="mt-3">
-                                            <p>
-                                                <strong>رقم الطلب:</strong> {{ installation.order.order_number }}
-                                            </p>
-                                            <p>
-                                                <strong>العميل:</strong> {{ installation.order.customer.name }}
-                                            </p>
-                                            <p>
-                                                <strong>تاريخ التركيب:</strong> {{ installation.scheduled_date|date:"Y-m-d" }}
-                                            </p>
-                                            <p>
-                                                <strong>موعد التركيب:</strong> {{ installation.scheduled_time|time:"H:i" }}
-                                            </p>
-                                            <p>
-                                                <strong>الفريق:</strong> {{ installation.team.name|default:"غير محدد" }}
-                                            </p>
-                                            <p>
-                                                <strong>الحالة الحالية:</strong>
-                                                <span class="badge badge-{{ installation.status|yesno:'success,warning' }}">
-                                                    {{ installation.get_status_display }}
-                                                </span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="card border-left-info mt-3">
-                                    <div class="card-body">
-                                        <h6 class="card-title text-info">
-                                            <i class="fas fa-lightbulb"></i>
-                                            ملاحظات مهمة
-                                        </h6>
-                                        <div class="mt-3">
-                                            <ul class="list-unstyled">
-                                                <li>
-                                                    <i class="fas fa-check text-success"></i> سيتم إنشاء أمر تصنيع من نوع تعديل
-                                                </li>
-                                                <li>
-                                                    <i class="fas fa-check text-success"></i> سيتم عرض الطلب في لوحة المصنع
-                                                </li>
-                                                <li>
-                                                    <i class="fas fa-check text-success"></i> يمكن رفع صور للتعديل لاحقاً
-                                                </li>
-                                                <li>
-                                                    <i class="fas fa-check text-success"></i> سيتم تحديث حالة التركيب تلقائياً
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">الأولوية</label>
+                                {{ form.priority }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">تفاصيل التعديل العامة <span class="text-danger">*</span></label>
+                            {{ form.description }}
+                            {% if form.description.errors %}<div class="text-danger small">{{ form.description.errors }}</div>{% endif %}
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">التكلفة المتوقعة</label>
+                                {{ form.estimated_cost }}
+                            </div>
+                            <div class="col-md-6 mb-3 d-flex align-items-end">
+                                <div class="form-check">
+                                    {{ form.customer_approval }}
+                                    <label class="form-check-label fw-bold" for="{{ form.customer_approval.id_for_label }}">موافقة العميل</label>
                                 </div>
                             </div>
                         </div>
+
+                        <!-- فاصل بين البيانات والستائر -->
+                        <hr class="my-3">
+                        <h6 class="fw-bold text-danger mb-3"><i class="fas fa-list-check me-1"></i> تحديد الستائر والأقمشة المطلوب تعديلها <span class="badge bg-danger ms-2">مطلوب</span></h6>
+                    </div>
+
+                    <!-- جدول الستائر -->
+                    <div class="card-body p-0 border-top">
+                        {% if curtains %}
+                            {% for curtain in curtains %}
+                            <div class="border-bottom p-3">
+                                <div class="fw-bold mb-2">
+                                    <i class="fas fa-border-all text-muted me-1"></i>
+                                    {{ curtain.room_name }}
+                                    {% if curtain.sequence %}<small class="text-muted">({{ curtain.sequence }})</small>{% endif %}
+                                    <small class="text-muted ms-2">{{ curtain.width }}×{{ curtain.height }} م</small>
+                                </div>
+                                {% if curtain.fabrics.all %}
+                                    <div class="row g-2">
+                                        {% for fabric in curtain.fabrics.all %}
+                                        <div class="col-md-6 col-lg-4">
+                                            <div class="fabric-cell border rounded p-2" id="cell_{{ curtain.id }}_{{ fabric.fabric_type }}">
+                                                <div class="form-check">
+                                                    <input class="form-check-input fabric-check" type="checkbox"
+                                                           name="curtain_{{ curtain.id }}_{{ fabric.fabric_type }}"
+                                                           id="chk_{{ curtain.id }}_{{ fabric.fabric_type }}"
+                                                           data-curtain="{{ curtain.id }}" data-type="{{ fabric.fabric_type }}"
+                                                           onchange="toggleFabricDetails(this)">
+                                                    <label class="form-check-label" for="chk_{{ curtain.id }}_{{ fabric.fabric_type }}">
+                                                        <span class="badge {% if fabric.fabric_type == 'light' %}bg-info{% elif fabric.fabric_type == 'heavy' %}bg-primary{% elif fabric.fabric_type == 'blackout' %}bg-dark{% elif fabric.fabric_type == 'belt' %}bg-warning text-dark{% else %}bg-secondary{% endif %} me-1">{{ fabric.get_fabric_type_display }}</span>
+                                                        <small>{{ fabric.fabric_name|default:"—" }}</small>
+                                                        <small class="text-muted">({{ fabric.meters }} م)</small>
+                                                    </label>
+                                                </div>
+                                                <div class="fabric-details mt-2 d-none" id="details_{{ curtain.id }}_{{ fabric.fabric_type }}">
+                                                    <input type="text" class="form-control form-control-sm mb-1"
+                                                           name="curtain_{{ curtain.id }}_{{ fabric.fabric_type }}_reason"
+                                                           placeholder="سبب التعديل...">
+                                                    <input type="number" step="0.01" class="form-control form-control-sm"
+                                                           name="curtain_{{ curtain.id }}_{{ fabric.fabric_type }}_meters"
+                                                           placeholder="أمتار جديدة (اختياري)">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <small class="text-muted"><i class="fas fa-info-circle"></i> لا توجد أقمشة مسجلة لهذه الستارة</small>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                            <div class="p-3 bg-light border-top">
+                                <small class="text-muted"><i class="fas fa-info-circle"></i> ضع علامة على الأقمشة التي تحتاج تعديل، ثم اكتب سبب التعديل لكل منها. الأمتار الجديدة اختيارية.</small>
+                            </div>
+                        {% else %}
+                            <div class="text-center p-4 text-muted">
+                                <i class="fas fa-exclamation-circle fa-2x mb-2"></i>
+                                <p>لا توجد ستائر مسجلة لهذا الطلب</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-warning px-4" id="submitBtn">
+                        <i class="fas fa-save"></i> إنشاء طلب التعديل
+                    </button>
+                    <a href="{% url 'installations:installation_detail' installation.id %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> إلغاء
+                    </a>
+                </div>
+            </div>
+
+            <!-- الشريط الجانبي -->
+            <div class="col-lg-4">
+                <div class="card shadow mb-3 border-start border-warning border-3">
+                    <div class="card-body">
+                        <h6 class="text-warning mb-3"><i class="fas fa-info-circle"></i> معلومات التركيب</h6>
+                        <table class="table table-sm table-borderless mb-0">
+                            <tr><th>الطلب:</th><td>{{ order.order_number }}</td></tr>
+                            <tr><th>العميل:</th><td>{{ order.customer.name }}</td></tr>
+                            <tr><th>الهاتف:</th><td>{{ order.customer.phone }}</td></tr>
+                            <tr><th>التاريخ:</th><td>{{ installation.scheduled_date|date:"Y-m-d" }}</td></tr>
+                            <tr><th>الفريق:</th><td>{{ installation.team.name|default:"غير محدد" }}</td></tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="card shadow border-start border-info border-3">
+                    <div class="card-body">
+                        <h6 class="text-info mb-3"><i class="fas fa-route"></i> مسار التعديل</h6>
+                        <ol class="list-group list-group-numbered list-group-flush small">
+                            <li class="list-group-item border-0 px-0 py-1 fw-bold text-warning">إنشاء طلب التعديل (أنت هنا)</li>
+                            <li class="list-group-item border-0 px-0 py-1">التحقيق وتحديد المسؤولية <i class="fas fa-arrow-left text-primary ms-1"></i> <small class="text-muted">الخطوة التالية</small></li>
+                            <li class="list-group-item border-0 px-0 py-1">الموافقة وإرسال للمصنع</li>
+                            <li class="list-group-item border-0 px-0 py-1">التصنيع في المصنع</li>
+                            <li class="list-group-item border-0 px-0 py-1">إكمال التعديل وإخطار البائع</li>
+                        </ol>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </form>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function toggleFabricDetails(checkbox) {
+    const curtainId = checkbox.dataset.curtain;
+    const fabricType = checkbox.dataset.type;
+    const detailsDiv = document.getElementById(`details_${curtainId}_${fabricType}`);
+    const cellDiv = document.getElementById(`cell_${curtainId}_${fabricType}`);
+
+    if (checkbox.checked) {
+        detailsDiv.classList.remove('d-none');
+        cellDiv.style.backgroundColor = '#fff3cd';
+        detailsDiv.querySelector('input[type="text"]').required = true;
+    } else {
+        detailsDiv.classList.add('d-none');
+        cellDiv.style.backgroundColor = '';
+        detailsDiv.querySelector('input[type="text"]').required = false;
+        detailsDiv.querySelectorAll('input').forEach(i => i.value = '');
+    }
+}
+
+document.getElementById('modificationForm').addEventListener('submit', function(e) {
+    const checked = document.querySelectorAll('.fabric-check:checked');
+    if (checked.length === 0) {
+        e.preventDefault();
+        alert('يجب اختيار على الأقل ستارة واحدة للتعديل');
+        return false;
+    }
+});
+</script>
 {% endblock %}
 {% block extra_css %}
-    <style>
-.form-control {
-    border-radius: 8px;
-    border: 1px solid #d1d3e2;
-}
-
-.form-control:focus {
-    border-color: #f6c23e;
-    box-shadow: 0 0 0 0.2rem rgba(246, 194, 62, 0.25);
-}
-
-.btn {
-    border-radius: 8px;
-    font-weight: 500;
-}
-
-.card {
-    border-radius: 12px;
-    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-}
-
-.badge {
-    font-size: 0.8em;
-    padding: 0.5em 0.8em;
-}
-
-.border-left-warning {
-    border-left: 0.25rem solid #f6c23e !important;
-}
-
-.border-left-info {
-    border-left: 0.25rem solid #36b9cc !important;
-}
-
-.form-check-input:checked {
-    background-color: #f6c23e;
-    border-color: #f6c23e;
-}
-    </style>
+<style>
+.fabric-cell { min-width: 120px; }
+.fabric-details input { font-size: 0.78rem; }
+</style>
 {% endblock %}

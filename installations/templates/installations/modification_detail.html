@@ -1,303 +1,375 @@
 {% extends 'base.html' %}
 {% load static %}
-{% load custom_filters %}
-{% load order_extras %}
-{% block title %}تفاصيل طلب التعديل - {{ modification_request.installation.order.order_number }}{% endblock %}
+{% block title %}تفاصيل طلب التعديل #{{ modification_request.pk }}{% endblock %}
 {% block content %}
-    <div class="container-fluid">
-        <!-- عنوان الصفحة -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h3 mb-0">
-                <i class="fas fa-tools text-warning"></i>
-                تفاصيل طلب التعديل - {{ modification_request.installation.order.order_number }}
-            </h1>
-            <div class="btn-group">
-                <a href="{% url 'installations:installation_detail' modification_request.installation.id %}"
-                   class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-right"></i> العودة للتركيب
-                </a>
-                <a href="{% url 'installations:dashboard' %}"
-                   class="btn btn-outline-primary">
-                    <i class="fas fa-tachometer-alt"></i> لوحة التحكم
-                </a>
+<div class="container-fluid">
+    <!-- العنوان وأزرار العودة -->
+    <div class="row mb-3 align-items-center">
+        <div class="col-md-8">
+            <h4 class="m-0">
+                <i class="fas fa-tools text-warning me-2"></i>
+                طلب تعديل #{{ modification_request.pk }}
+                &mdash;
+                <span class="fs-6 fw-normal text-muted">{{ modification_request.installation.order.order_number }}</span>
+            </h4>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'installations:installation_detail' modification_request.installation.id %}" class="btn btn-sm btn-outline-secondary me-1">
+                <i class="fas fa-arrow-right"></i> التركيب
+            </a>
+            <a href="{% url 'installations:modification_requests_list' %}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-list"></i> كل الطلبات
+            </a>
+        </div>
+    </div>
+
+    <!-- شريط الحالة -->
+    <div class="card shadow mb-4">
+        <div class="card-body py-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                {% with status=modification_request.status %}
+                <div class="d-flex gap-3 align-items-center">
+                    <span class="badge fs-6
+                        {% if status == 'pending' %}bg-secondary
+                        {% elif status == 'investigating' %}bg-info
+                        {% elif status == 'approved' %}bg-primary
+                        {% elif status == 'manufacturing' %}bg-warning text-dark
+                        {% elif status == 'completed' %}bg-success
+                        {% elif status == 'cancelled' %}bg-danger
+                        {% endif %}">
+                        {{ modification_request.get_status_display }}
+                    </span>
+                    <span class="text-muted small">
+                        <i class="fas fa-clock me-1"></i>{{ modification_request.created_at|date:"Y-m-d H:i" }}
+                    </span>
+                    {% if modification_request.created_by %}
+                        <span class="text-muted small"><i class="fas fa-user me-1"></i>{{ modification_request.created_by.get_full_name|default:modification_request.created_by.username }}</span>
+                    {% endif %}
+                </div>
+                <!-- أزرار الإجراءات حسب الحالة -->
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'installations:upload_modification_images' modification_request.id %}" class="btn btn-sm btn-outline-info">
+                        <i class="fas fa-image"></i> صور
+                    </a>
+                    {% if status == 'pending' or status == 'investigating' %}
+                    <a href="{% url 'installations:investigate_modification' modification_request.id %}" class="btn btn-sm btn-info">
+                        <i class="fas fa-search"></i> تحقيق
+                    </a>
+                    {% endif %}
+                    {% if status == 'investigating' or status == 'approved' %}
+                    <form method="post" action="{% url 'installations:approve_modification' modification_request.id %}" class="d-inline" onsubmit="return confirm('هل تريد الموافقة وإرسال أمر تصنيع؟')">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-warning" type="submit">
+                            <i class="fas fa-industry"></i> موافقة وتصنيع
+                        </button>
+                    </form>
+                    {% endif %}
+                    {% if status == 'manufacturing' %}
+                    <form method="post" action="{% url 'installations:complete_modification' modification_request.id %}" class="d-inline" onsubmit="return confirm('هل تم الانتهاء من جميع التعديلات؟')">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-success" type="submit">
+                            <i class="fas fa-check-circle"></i> إكمال التعديل
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endwith %}
             </div>
         </div>
-        <div class="row">
-            <!-- معلومات طلب التعديل -->
-            <div class="col-lg-8">
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-warning">
-                            <i class="fas fa-info-circle"></i>
-                            معلومات طلب التعديل
-                        </h6>
+    </div>
+
+    <div class="row">
+        <!-- العمود الرئيسي -->
+        <div class="col-lg-8">
+            <!-- معلومات الطلب -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-2 bg-warning text-dark">
+                    <h6 class="m-0"><i class="fas fa-info-circle"></i> معلومات طلب التعديل</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr><th>العميل:</th><td>{{ modification_request.customer.name }}</td></tr>
+                                <tr><th>نوع التعديل:</th><td>{{ modification_request.modification_type }}</td></tr>
+                                <tr><th>الأولوية:</th>
+                                    <td><span class="badge {% if modification_request.priority == 'urgent' %}bg-danger{% elif modification_request.priority == 'high' %}bg-warning text-dark{% elif modification_request.priority == 'medium' %}bg-info{% else %}bg-secondary{% endif %}">
+                                        {{ modification_request.get_priority_display }}</span></td>
+                                </tr>
+                                <tr><th>موافقة العميل:</th>
+                                    <td>{% if modification_request.customer_approval %}<span class="badge bg-success">نعم</span>{% else %}<span class="badge bg-secondary">لا</span>{% endif %}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr><th>التكلفة المتوقعة:</th><td>{{ modification_request.estimated_cost|floatformat:2 }}</td></tr>
+                                <tr><th>تاريخ الإنشاء:</th><td>{{ modification_request.created_at|date:"Y-m-d H:i" }}</td></tr>
+                                <tr><th>آخر تحديث:</th><td>{{ modification_request.updated_at|date:"Y-m-d H:i" }}</td></tr>
+                            </table>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <table class="table table-borderless">
-                                    <tr>
-                                        <th>رقم الطلب:</th>
-                                        <td>{{ modification_request.installation.order.order_number }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>اسم العميل:</th>
-                                        <td>{{ modification_request.customer.name }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>نوع التعديل:</th>
-                                        <td>{{ modification_request.modification_type }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>الأولوية:</th>
-                                        <td>
-                                            {% if modification_request.priority == 'low' %}
-                                                <span class="badge badge-secondary">منخفض</span>
-                                            {% elif modification_request.priority == 'medium' %}
-                                                <span class="badge badge-info">متوسط</span>
-                                            {% elif modification_request.priority == 'high' %}
-                                                <span class="badge badge-warning">عالي</span>
-                                            {% elif modification_request.priority == 'urgent' %}
-                                                <span class="badge badge-danger">عاجل</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                </table>
-                            </div>
-                            <div class="col-md-6">
-                                <table class="table table-borderless">
-                                    <tr>
-                                        <th>التكلفة المتوقعة:</th>
-                                        <td>{{ modification_request.estimated_cost|currency_format }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>موافقة العميل:</th>
-                                        <td>
-                                            {% if modification_request.customer_approval %}
-                                                <span class="badge badge-success">موافق</span>
-                                            {% else %}
-                                                <span class="badge badge-warning">في الانتظار</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th>تاريخ الإنشاء:</th>
-                                        <td>{{ modification_request.created_at|date:"Y-m-d H:i" }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>آخر تحديث:</th>
-                                        <td>{{ modification_request.updated_at|date:"Y-m-d H:i" }}</td>
-                                    </tr>
-                                </table>
-                            </div>
+                    <hr class="my-2">
+                    <p class="mb-0 text-muted"><strong>التفاصيل:</strong> {{ modification_request.description }}</p>
+                </div>
+            </div>
+
+            <!-- عناصر التعديل (الستائر والأقمشة) -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-2 bg-dark text-white">
+                    <h6 class="m-0"><i class="fas fa-list"></i> عناصر التعديل ({{ items|length }} عنصر)</h6>
+                </div>
+                <div class="card-body p-0">
+                    {% if items %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover mb-0">
+                            <thead class="table-secondary">
+                                <tr>
+                                    <th>الغرفة</th>
+                                    <th>نوع القماش</th>
+                                    <th>الأمتار الأصلية</th>
+                                    <th>الأمتار الجديدة</th>
+                                    <th>سبب التعديل</th>
+                                    <th>المسؤولية</th>
+                                    <th>يحتاج تصنيع</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr>
+                                    <td class="fw-bold">{{ item.contract_curtain.room_name }}</td>
+                                    <td>{{ item.get_fabric_type_display }}</td>
+                                    <td class="text-center">{{ item.original_meters|default:"—"|floatformat:1 }} م</td>
+                                    <td class="text-center">
+                                        {% if item.new_meters %}
+                                            <span class="text-primary fw-bold">{{ item.new_meters|floatformat:1 }} م</span>
+                                        {% else %}—{% endif %}
+                                    </td>
+                                    <td class="text-muted small">{{ item.modification_reason|truncatechars:60 }}</td>
+                                    <td>
+                                        {% if item.fault_party %}
+                                            <span class="badge bg-warning text-dark">{{ item.get_fault_party_display }}</span>
+                                        {% else %}
+                                            <span class="text-muted small">لم يحدد</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if item.needs_manufacturing %}
+                                            <span class="badge bg-danger">نعم</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">لا</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge
+                                            {% if item.status == 'completed' %}bg-success
+                                            {% elif item.status == 'manufacturing' %}bg-warning text-dark
+                                            {% elif item.status == 'investigating' %}bg-info
+                                            {% else %}bg-secondary{% endif %}">
+                                            {{ item.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center p-4 text-muted">
+                        <i class="fas fa-info-circle"></i> لا توجد عناصر مسجلة
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- نتائج التحقيق -->
+            {% if modification_request.investigation_status == 'completed' or modification_request.investigation_notes %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-2 bg-info text-white">
+                    <h6 class="m-0"><i class="fas fa-search"></i> نتائج التحقيق</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>الجهة المسؤولة الكلية:</strong><br>
+                            {% if modification_request.overall_fault_party %}
+                                <span class="badge bg-danger fs-6">{{ modification_request.get_overall_fault_party_display }}</span>
+                            {% else %}
+                                <span class="text-muted">لم يحدد</span>
+                            {% endif %}
                         </div>
-                        <div class="mt-3">
-                            <h6>تفاصيل التعديل:</h6>
-                            <p class="text-muted">{{ modification_request.description }}</p>
+                        <div class="col-md-4">
+                            <strong>المحقق:</strong><br>
+                            {% if modification_request.investigated_by %}
+                                {{ modification_request.investigated_by.get_full_name|default:modification_request.investigated_by.username }}
+                            {% else %}<span class="text-muted">—</span>{% endif %}
                         </div>
+                        <div class="col-md-4">
+                            <strong>تاريخ التحقيق:</strong><br>
+                            {% if modification_request.investigation_date %}
+                                {{ modification_request.investigation_date|date:"Y-m-d H:i" }}
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                        </div>
+                    </div>
+                    {% if modification_request.investigation_notes %}
+                    <hr class="my-2">
+                    <p class="mb-0 text-muted"><strong>ملاحظات التحقيق:</strong> {{ modification_request.investigation_notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- أوامر التصنيع -->
+            {% if mfg_orders %}
+            <div class="card shadow mb-4">
+                <div class="card-header py-2 bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h6 class="m-0"><i class="fas fa-industry"></i> أوامر التصنيع</h6>
+                    <span class="badge bg-light text-primary">{{ mfg_orders|length }}</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>كود التصنيع</th>
+                                    <th>الحالة</th>
+                                    <th>تاريخ الإنشاء</th>
+                                    <th>إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mo in mfg_orders %}
+                                <tr>
+                                    <td>{{ mo.pk }}</td>
+                                    <td>{{ mo.manufacturing_code|default:"—" }}</td>
+                                    <td>
+                                        <span class="badge
+                                            {% if mo.status == 'completed' or mo.status == 'delivered' %}bg-success
+                                            {% elif mo.status == 'in_progress' %}bg-warning text-dark
+                                            {% elif mo.status == 'pending' %}bg-secondary
+                                            {% elif mo.status == 'cancelled' %}bg-danger
+                                            {% else %}bg-info{% endif %}">
+                                            {{ mo.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ mo.created_at|date:"Y-m-d" }}</td>
+                                    <td>
+                                        <a href="{% url 'manufacturing:order_detail' mo.pk %}" class="btn btn-xs btn-outline-primary btn-sm" target="_blank">
+                                            <i class="fas fa-eye"></i> عرض
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <!-- صور التعديل -->
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                        <h6 class="m-0 font-weight-bold text-warning">
-                            <i class="fas fa-images"></i>
-                            صور التعديل
-                        </h6>
-                        <a href="{% url 'installations:upload_modification_images' modification_request.id %}"
-                           class="btn btn-sm btn-warning">
-                            <i class="fas fa-upload"></i> رفع صور
+            </div>
+            {% endif %}
+
+            <!-- الصور -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0"><i class="fas fa-images text-info"></i> صور التعديل</h6>
+                    <a href="{% url 'installations:upload_modification_images' modification_request.id %}" class="btn btn-sm btn-outline-info">
+                        <i class="fas fa-upload"></i> رفع صور
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if images %}
+                    <div class="row g-2">
+                        {% for img in images %}
+                        <div class="col-md-3 col-sm-4 col-6">
+                            <div class="card h-100">
+                                <a href="{{ img.image.url }}" target="_blank">
+                                    <img src="{{ img.image.url }}" class="card-img-top" style="height:120px; object-fit:cover;" alt="صورة تعديل">
+                                </a>
+                                <div class="card-body p-2">
+                                    <small class="text-muted">{{ img.description|default:"بدون وصف" }}</small><br>
+                                    <small class="text-muted">{{ img.uploaded_at|date:"Y-m-d" }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-image fa-2x mb-2"></i>
+                        <p class="mb-1">لا توجد صور</p>
+                        <a href="{% url 'installations:upload_modification_images' modification_request.id %}" class="btn btn-sm btn-outline-info">
+                            <i class="fas fa-upload"></i> رفع صور التعديل
                         </a>
                     </div>
-                    <div class="card-body">
-                        {% if images %}
-                            <div class="row">
-                                {% for image in images %}
-                                    <div class="col-md-4 mb-3">
-                                        <div class="card">
-                                            <img src="{{ image.image.url }}"
-                                                 class="card-img-top"
-                                                 alt="صورة التعديل"
-                                                 style="height: 200px;
-                                                        object-fit: cover">
-                                            <div class="card-body">
-                                                <p class="card-text">{{ image.description|default:"صورة التعديل" }}</p>
-                                                <small class="text-muted">{{ image.uploaded_at|date:"Y-m-d H:i" }}</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <div class="text-center py-4">
-                                <i class="fas fa-images fa-3x text-muted mb-3"></i>
-                                <p class="text-muted">لا توجد صور مرفوعة للتعديل</p>
-                                <a href="{% url 'installations:upload_modification_images' modification_request.id %}"
-                                   class="btn btn-warning">
-                                    <i class="fas fa-upload"></i> رفع صور التعديل
-                                </a>
-                            </div>
-                        {% endif %}
-                    </div>
+                    {% endif %}
                 </div>
-                <!-- أوامر التصنيع المرتبطة -->
-                {% if modification_request.modification_manufacturing_orders.exists %}
-                    <div class="card shadow mb-4">
-                        <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-info">
-                                <i class="fas fa-industry"></i>
-                                أوامر التصنيع المرتبطة
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-                                <table class="table table-bordered">
-                                    <thead>
-                                        <tr>
-                                            <th>نوع الأمر</th>
-                                            <th>الحالة</th>
-                                            <th>المُسند إلى</th>
-                                            <th>تاريخ الإنشاء</th>
-                                            <th>الإجراءات</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for order in modification_request.modification_manufacturing_orders.all %}
-                                            <tr>
-                                                <td>{{ order.get_order_type_display }}</td>
-                                                <td>
-                                                    {% if order.status == 'pending' %}
-                                                        <span class="badge badge-warning">في الانتظار</span>
-                                                    {% elif order.status == 'approved' %}
-                                                        <span class="badge badge-info">موافق عليه</span>
-                                                    {% elif order.status == 'in_progress' %}
-                                                        <span class="badge badge-primary">قيد التنفيذ</span>
-                                                    {% elif order.status == 'completed' %}
-                                                        <span class="badge badge-success">مكتمل</span>
-                                                    {% elif order.status == 'cancelled' %}
-                                                        <span class="badge badge-danger">ملغي</span>
-                                                    {% endif %}
-                                                </td>
-                                                <td>
-                                                    {% if order.assigned_to %}
-                                                        {{ order.assigned_to.get_full_name|default:order.assigned_to.username|default:"غير محدد" }}
-                                                    {% else %}
-                                                        غير محدد
-                                                    {% endif %}
-                                                </td>
-                                                <td>{{ order.created_at|date:"Y-m-d" }}</td>
-                                                <td>
-                                                    <a href="{% url 'installations:manufacturing_order_detail' order.id %}"
-                                                       class="btn btn-sm btn-info">
-                                                        <i class="fas fa-eye"></i> عرض
-                                                    </a>
-                                                </td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
             </div>
-            <!-- الإجراءات السريعة -->
-            <div class="col-lg-4">
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-warning">
-                            <i class="fas fa-cogs"></i>
-                            الإجراءات السريعة
-                        </h6>
+        </div>
+
+        <!-- الشريط الجانبي -->
+        <div class="col-lg-4">
+            <!-- معلومات التركيب -->
+            <div class="card shadow mb-3">
+                <div class="card-header py-2 bg-primary text-white">
+                    <h6 class="m-0"><i class="fas fa-hammer"></i> معلومات التركيب</h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless mb-0">
+                        <tr><th>رقم الطلب:</th><td>{{ modification_request.installation.order.order_number }}</td></tr>
+                        <tr><th>العميل:</th><td>{{ modification_request.installation.order.customer.name }}</td></tr>
+                        <tr><th>التاريخ:</th><td>{{ modification_request.installation.scheduled_date|date:"Y-m-d" }}</td></tr>
+                        <tr><th>الفريق:</th><td>{{ modification_request.installation.team.name|default:"غير محدد" }}</td></tr>
+                        <tr><th>حالة التركيب:</th>
+                            <td><span class="badge bg-info">{{ modification_request.installation.get_status_display }}</span></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ملخص التقدم -->
+            <div class="card shadow mb-3">
+                <div class="card-header py-2">
+                    <h6 class="m-0"><i class="fas fa-chart-pie text-muted"></i> ملخص العناصر</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>إجمالي العناصر</span>
+                        <strong>{{ items|length }}</strong>
                     </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <a href="{% url 'installations:upload_modification_images' modification_request.id %}"
-                               class="btn btn-info btn-block">
-                                <i class="fas fa-upload"></i> رفع صور
-                            </a>
-                            <a href="{% url 'installations:create_manufacturing_order' modification_request.id %}"
-                               class="btn btn-warning btn-block">
-                                <i class="fas fa-industry"></i> إنشاء أمر تصنيع
-                            </a>
-                            <a href="{% url 'installations:add_error_analysis' modification_request.id %}"
-                               class="btn btn-danger btn-block">
-                                <i class="fas fa-exclamation-triangle"></i> إضافة تحليل خطأ
-                            </a>
-                            <a href="{% url 'installations:installation_detail' modification_request.installation.id %}"
-                               class="btn btn-secondary btn-block">
-                                <i class="fas fa-arrow-right"></i> العودة للتركيب
-                            </a>
-                        </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>تحتاج تصنيع</span>
+                        <strong class="text-danger">{{ modification_request.items_needing_manufacturing.count }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>أوامر تصنيع</span>
+                        <strong class="text-primary">{{ mfg_orders|length }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>الصور</span>
+                        <strong class="text-info">{{ images|length }}</strong>
                     </div>
                 </div>
-                <!-- معلومات التركيب -->
-                <div class="card shadow mb-4">
-                    <div class="card-header py-3">
-                        <h6 class="m-0 font-weight-bold text-primary">
-                            <i class="fas fa-info-circle"></i>
-                            معلومات التركيب
-                        </h6>
-                    </div>
-                    <div class="card-body">
-                        <p>
-                            <strong>رقم الطلب:</strong> {{ modification_request.installation.order.order_number }}
-                        </p>
-                        <p>
-                            <strong>العميل:</strong> {{ modification_request.installation.order.customer.name }}
-                        </p>
-                        <p>
-                            <strong>تاريخ التركيب:</strong> {{ modification_request.installation.scheduled_date|date:"Y-m-d" }}
-                        </p>
-                        <p>
-                            <strong>موعد التركيب:</strong> {{ modification_request.installation.scheduled_time|time:"H:i" }}
-                        </p>
-                        <p>
-                            <strong>الفريق:</strong> {{ modification_request.installation.team.name|default:"غير محدد" }}
-                        </p>
-                        <p>
-                            <strong>حالة التركيب:</strong>
-                            {% if modification_request.installation.status == 'modification_required' %}
-                                <span class="badge badge-warning">يحتاج تعديل</span>
-                            {% elif modification_request.installation.status == 'modification_in_progress' %}
-                                <span class="badge badge-info">التعديل قيد التنفيذ</span>
-                            {% elif modification_request.installation.status == 'modification_completed' %}
-                                <span class="badge badge-success">التعديل مكتمل</span>
-                            {% else %}
-                                <span class="badge badge-secondary">{{ modification_request.installation.get_status_display }}</span>
-                            {% endif %}
-                        </p>
-                    </div>
+            </div>
+
+            <!-- روابط تحليل الأخطاء -->
+            <div class="card shadow mb-3">
+                <div class="card-header py-2">
+                    <h6 class="m-0"><i class="fas fa-exclamation-triangle text-danger"></i> تحليل الأخطاء</h6>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'installations:add_error_analysis' modification_request.id %}" class="btn btn-sm btn-outline-danger w-100">
+                        <i class="fas fa-plus"></i> إضافة تحليل خطأ
+                    </a>
                 </div>
             </div>
         </div>
     </div>
+</div>
 {% endblock %}
 {% block extra_css %}
-    <style>
-.card {
-    border-radius: 12px;
-    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
-}
-
-.badge {
-    font-size: 0.8em;
-    padding: 0.5em 0.8em;
-}
-
-.btn {
-    border-radius: 8px;
-    font-weight: 500;
-}
-
-.table th {
-    background-color: #8B4513;
-    color: white;
-    font-weight: bold;
-}
-
-.border-left-warning {
-    border-left: 0.25rem solid #f6c23e !important;
-}
-    </style>
+<style>
+.table th { font-weight: 600; }
+.btn-xs { padding: 0.15rem 0.4rem; font-size: 0.75rem; }
+</style>
 {% endblock %}

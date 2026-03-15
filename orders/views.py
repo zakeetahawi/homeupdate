@@ -175,6 +175,7 @@ def order_list(request):
             Q(order_number__icontains=search_query)
             | Q(customer__name__icontains=search_query)
             | Q(customer__phone__icontains=search_query)
+            | Q(customer__code__icontains=search_query)
             | Q(contract_number__icontains=search_query)
             | Q(contract_number_2__icontains=search_query)
             | Q(contract_number_3__icontains=search_query)

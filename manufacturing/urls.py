@@ -51,6 +51,12 @@ urlpatterns = [
         views.material_summary_view,
         name="material_summary_print",
     ),
+    # صفحة تفاصيل أمر تصنيع التعديل
+    path(
+        "order/<int:pk>/modification/",
+        views.modification_manufacturing_detail,
+        name="modification_manufacturing_detail",
+    ),
     # URLs القديمة مع إعادة توجيه
     path(
         "orders/<int:pk>/",

@@ -751,6 +751,78 @@ body {
     font-family: 'Noto Naskh Arabic', 'Arial', sans-serif !important;
     color: var(--dark-text);
     background-color: var(--light-bg);
+    position: relative;
+}
+
+/* Animated flowing background — DEFAULT THEME ONLY */
+html:not([data-theme]) body::before {
+    content: '';
+    position: fixed;
+    top: -60%;
+    left: -60%;
+    width: 220%;
+    height: 220%;
+    z-index: -2;
+    pointer-events: none;
+    background-image:
+        /* Large drifting organic blobs */
+        radial-gradient(circle 280px at 15% 25%, rgba(139,115,90,0.13) 0%, transparent 55%),
+        radial-gradient(circle 220px at 72% 55%, rgba(166,123,91,0.11) 0%, transparent 50%),
+        radial-gradient(circle 250px at 40% 78%, rgba(95,75,50,0.09) 0%, transparent 60%),
+        radial-gradient(circle 180px at 88% 18%, rgba(180,150,115,0.10) 0%, transparent 50%),
+        radial-gradient(circle 200px at 55% 10%, rgba(139,115,90,0.08) 0%, transparent 55%),
+        radial-gradient(circle 160px at 25% 65%, rgba(166,123,91,0.09) 0%, transparent 50%),
+        /* Diagonal flowing ribbons */
+        linear-gradient(135deg, transparent 28%, rgba(139,115,90,0.07) 33%, transparent 38%),
+        linear-gradient(315deg, transparent 48%, rgba(166,123,91,0.06) 53%, transparent 58%),
+        linear-gradient(225deg, transparent 60%, rgba(95,75,50,0.05) 65%, transparent 70%);
+    background-size: 100% 100%;
+    animation: floatDrift 22s ease-in-out infinite;
+}
+
+html:not([data-theme]) body::after {
+    content: '';
+    position: fixed;
+    top: -30%;
+    left: -30%;
+    width: 160%;
+    height: 160%;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+        /* Wandering glow highlights */
+        radial-gradient(ellipse 320px 220px at 28% 35%, rgba(212,185,150,0.20) 0%, transparent 65%),
+        radial-gradient(ellipse 260px 200px at 68% 22%, rgba(200,170,130,0.16) 0%, transparent 60%),
+        radial-gradient(ellipse 220px 280px at 52% 72%, rgba(180,150,115,0.14) 0%, transparent 58%),
+        radial-gradient(ellipse 180px 160px at 82% 80%, rgba(195,165,125,0.12) 0%, transparent 55%),
+        /* Fine floating particles */
+        radial-gradient(circle 3px at 12% 18%, rgba(139,115,90,0.25) 0%, transparent 100%),
+        radial-gradient(circle 2px at 38% 52%, rgba(120,95,65,0.22) 0%, transparent 100%),
+        radial-gradient(circle 3px at 62% 30%, rgba(160,130,95,0.20) 0%, transparent 100%),
+        radial-gradient(circle 2.5px at 83% 68%, rgba(139,115,90,0.22) 0%, transparent 100%),
+        radial-gradient(circle 2px at 48% 88%, rgba(145,120,88,0.18) 0%, transparent 100%),
+        radial-gradient(circle 3px at 75% 12%, rgba(130,105,75,0.24) 0%, transparent 100%),
+        radial-gradient(circle 2px at 22% 78%, rgba(166,123,91,0.20) 0%, transparent 100%),
+        radial-gradient(circle 2.5px at 90% 45%, rgba(139,115,90,0.18) 0%, transparent 100%);
+    background-size: 100% 100%;
+    animation: wanderGlow 16s ease-in-out infinite alternate;
+}
+
+@keyframes floatDrift {
+    0%   { transform: translate(0, 0) rotate(0deg); }
+    20%  { transform: translate(45px, -35px) rotate(0.8deg); }
+    40%  { transform: translate(-25px, 55px) rotate(-0.5deg); }
+    60%  { transform: translate(35px, 25px) rotate(0.6deg); }
+    80%  { transform: translate(-40px, -20px) rotate(-0.4deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+@keyframes wanderGlow {
+    0%   { transform: translate(0, 0) scale(1); opacity: 0.6; }
+    25%  { transform: translate(55px, -40px) scale(1.04); opacity: 0.85; }
+    50%  { transform: translate(-30px, 50px) scale(0.96); opacity: 0.7; }
+    75%  { transform: translate(40px, 25px) scale(1.03); opacity: 0.9; }
+    100% { transform: translate(-20px, -35px) scale(1.01); opacity: 1; }
 }
 
 /* Theme transition effects */
