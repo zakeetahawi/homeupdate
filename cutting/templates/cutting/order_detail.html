@@ -6,56 +6,113 @@
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css"
           rel="stylesheet">
     <style>
+    /* === Header (compact) === */
     .cutting-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 15px;
+        background: linear-gradient(135deg, var(--primary, #8B735A) 0%, var(--accent, #5F4B32) 100%);
+        color: #fff;
+        border-radius: var(--radius, 8px);
     }
+    .cutting-header p,
+    .cutting-header .mb-1 { color: rgba(255,255,255,.9); font-size: .85rem; margin-bottom: .25rem !important; }
+    .cutting-header .badge { font-size: .75rem; }
+    .cutting-header h1 { font-size: 1.1rem; }
+
+    /* === Progress ring (smaller) === */
+    .progress-ring-wrap {
+        position: relative;
+        width: 70px; height: 70px;
+        margin: 0 auto;
+    }
+    .progress-ring-wrap svg { display: block; }
+    .progress-ring-wrap .progress-label {
+        position: absolute; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1rem; font-weight: 700; color: #fff;
+    }
+
+    /* === Inline stats in header === */
+    .header-stats { display: flex; justify-content: center; gap: .6rem; margin-top: .5rem; }
+    .header-stats .h-stat {
+        text-align: center;
+        background: rgba(255,255,255,.15);
+        border-radius: 6px;
+        padding: .3rem .7rem;
+        min-width: 60px;
+    }
+    .header-stats .h-stat-val { font-size: 1.1rem; font-weight: 700; color: #fff; line-height: 1.2; }
+    .header-stats .h-stat-lbl { font-size: .65rem; color: rgba(255,255,255,.8); }
+
+    /* === Item cards === */
     .item-card {
-        border-radius: 10px;
-        transition: all 0.3s ease;
-        border-left: 4px solid #dee2e6;
+        border-radius: var(--radius, 8px);
+        transition: var(--transition, all .3s ease);
+        border-right: 3px solid var(--border, #dee2e6);
+        border-top: none; border-bottom: none; border-left: none;
+        background: var(--card-bg, #fff);
+        font-size: .92rem;
     }
-    .item-card.completed {
-        border-left-color: #28a745;
-        background-color: #f8fff9;
-    }
-    .item-card.rejected {
-        border-left-color: #dc3545;
-        background-color: #fff8f8;
-    }
-    .item-card.pending {
-        border-left-color: #ffc107;
-        background-color: #fffdf5;
-    }
+    .item-card.completed { border-right-color: var(--success, #28a745); }
+    .item-card.rejected  { border-right-color: var(--error, #dc3545); }
+    .item-card.pending   { border-right-color: var(--warning, #ffc107); }
+    .item-card.in_progress { border-right-color: var(--info, #17a2b8); }
     .item-card:hover {
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        transform: translateY(-2px);
+        box-shadow: var(--shadow, 0 4px 15px rgba(0,0,0,.1));
+        transform: translateY(-1px);
     }
-    .action-buttons {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
+    .item-card .card-header {
+        background: var(--elevated-bg, #f8f9fa);
+        border-bottom: 1px solid var(--border, #dee2e6);
+        padding: .65rem .9rem;
     }
+    .item-card .card-body { padding: .8rem .9rem; }
+    .item-card .card-footer {
+        background: var(--surface, #f8f8f8);
+        border-top: 1px solid var(--border, #dee2e6);
+        padding: .55rem .9rem;
+    }
+
+    /* === Table view === */
+    .items-table { font-size: .82rem; }
+    .items-table th { white-space: nowrap; background: var(--elevated-bg, #f8f9fa); }
+    .items-table td { vertical-align: middle; }
+
+    /* === 5-per-row item columns === */
+    .item-col { flex: 0 0 50%; max-width: 50%; padding: .25rem; }
+    @media (min-width: 768px) { .item-col { flex: 0 0 33.333%; max-width: 33.333%; } }
+    @media (min-width: 1200px) { .item-col { flex: 0 0 20%; max-width: 20%; } }
+
+    /* === View toggle === */
+    .view-toggle .btn { padding: .2rem .5rem; font-size: .8rem; }
+    .view-toggle .btn.active { pointer-events: none; }
+
+    /* === Bulk actions === */
     .bulk-actions {
-        background: #f8f9fc;
-        border-radius: 10px;
-        border: 2px dashed #e3e6f0;
+        background: var(--surface, #f8f9fc);
+        border-radius: var(--radius, 8px);
+        border: 2px dashed var(--border, #e3e6f0);
     }
-    .progress-ring {
-        width: 80px;
-        height: 80px;
-    }
+    .action-buttons { display: flex; gap: .35rem; flex-wrap: wrap; }
+
+    /* === Dark theme === */
+    [data-theme="modern-black"] .cutting-header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    [data-theme="modern-black"] .item-card { background: #1a1a1a; }
+    [data-theme="modern-black"] .item-card .card-header { background: #222; }
+    [data-theme="modern-black"] .item-card .card-footer { background: #1e1e1e; }
+    [data-theme="modern-black"] .header-stats .h-stat { background: rgba(255,255,255,.08); }
+    [data-theme="modern-black"] .bulk-actions { background: #111; border-color: #333; }
+    [data-theme="modern-black"] .items-table th { background: #222; }
     </style>
 {% endblock %}
 {% block content %}
     <div class="container-fluid">
-        <!-- عنوان الصفحة -->
-        <div class="cutting-header p-4 mb-4 shadow">
+        <!-- عنوان الصفحة + إحصائيات -->
+        <div class="row g-3 mb-3">
+        <div class="col-lg-6">
+        <div class="cutting-header p-3 h-100 shadow-sm">
             <div class="row align-items-center">
                 <div class="col-md-8">
-                    <h1 class="h3 mb-2">
-                        <i class="fas fa-cut"></i>
+                    <h1 class="mb-1">
+                        <i class="fas fa-cut me-1"></i>
                         أمر التقطيع: {{ cutting_order.cutting_code }}
                     </h1>
                     <!-- نوع الطلب والوجهة -->
@@ -92,23 +149,12 @@
                                 العميل: {{ cutting_order.order.customer.name }}
                             </p>
                             <p class="mb-1">
-                                <i class="fas fa-file-contract"></i>
-                                رقم العقد:
-                                {% with all_contracts=cutting_order.order.get_all_contract_numbers %}
-                                    {% if all_contracts %}
-                                        {% for contract in all_contracts %}<span class="badge bg-secondary text-white me-1">{{ contract }}</span>{% endfor %}
-                                    {% else %}
-                                        <span class="text-muted">غير محدد</span>
-                                    {% endif %}
-                                {% endwith %}
-                            </p>
-                            <p class="mb-1">
                                 <i class="fas fa-receipt"></i>
                                 أرقام الفواتير:
                                 {% with all_invoices=cutting_order.order.get_all_invoice_numbers %}
                                     {% if all_invoices %}
                                         {% for invoice in all_invoices %}
-                                            <span class="badge badge-warning text-dark font-weight-bold me-1">{{ invoice }}</span>
+                                            <span class="badge bg-warning text-dark fw-bold me-1">{{ invoice }}</span>
                                         {% endfor %}
                                     {% else %}
                                         <span class="text-muted">غير محدد</span>
@@ -170,184 +216,128 @@
                     </div>
                 </div>
                 <div class="col-md-4 text-center">
-                    <div class="progress-ring mx-auto mb-2">
-                        <svg width="80" height="80">
-                            <circle cx="40" cy="40" r="35" stroke="#ffffff40" stroke-width="6" fill="none" />
-                            <circle cx="40" cy="40" r="35" stroke="#ffffff" stroke-width="6" fill="none" stroke-dasharray="{{ cutting_order.completion_percentage|floatformat:0 }}, 100" stroke-linecap="round" transform="rotate(-90 40 40)" />
+                    <div class="progress-ring-wrap mx-auto mb-1">
+                        <svg width="70" height="70" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,.2)" stroke-width="7" fill="none" />
+                            <circle cx="50" cy="50" r="42" stroke="#fff" stroke-width="7" fill="none"
+                                    pathLength="100"
+                                    stroke-dasharray="{{ cutting_order.completion_percentage|floatformat:0 }} 100"
+                                    stroke-linecap="round"
+                                    transform="rotate(-90 50 50)"
+                                    style="transition: stroke-dasharray .6s ease" />
                         </svg>
-                        <div class="position-absolute"
-                             style="top: 50%;
-                                    left: 50%;
-                                    transform: translate(-50%, -50%)">
-                            <h4 class="mb-0">{{ cutting_order.completion_percentage|floatformat:0 }}%</h4>
-                        </div>
+                        <div class="progress-label">{{ cutting_order.completion_percentage|floatformat:0 }}%</div>
                     </div>
                     <div class="d-flex justify-content-center gap-2">
                         {% if cutting_order.status == 'pending' %}
-                            <span class="badge badge-warning px-3 py-2"
-                                  style="background-color: #ffc107 !important;
-                                         color: #212529 !important;
-                                         font-weight: 600">قيد الانتظار</span>
+                            <span class="badge bg-warning text-dark px-3 py-2 fs-6">قيد الانتظار</span>
                         {% elif cutting_order.status == 'in_progress' %}
-                            <span class="badge badge-info px-3 py-2"
-                                  style="background-color: #17a2b8 !important;
-                                         color: white !important;
-                                         font-weight: 600">قيد التقطيع</span>
+                            <span class="badge bg-info text-white px-3 py-2 fs-6">قيد التقطيع</span>
                         {% elif cutting_order.status == 'completed' %}
-                            <span class="badge badge-success px-3 py-2"
-                                  style="background-color: #28a745 !important;
-                                         color: white !important;
-                                         font-weight: 600">مكتمل</span>
+                            <span class="badge bg-success text-white px-3 py-2 fs-6">مكتمل</span>
                         {% elif cutting_order.status == 'partially_completed' %}
-                            <span class="badge badge-primary px-3 py-2"
-                                  style="background-color: #007bff !important;
-                                         color: white !important;
-                                         font-weight: 600">مكتمل جزئياً</span>
+                            <span class="badge bg-primary text-white px-3 py-2 fs-6">مكتمل جزئياً</span>
                         {% else %}
-                            <span class="badge badge-danger px-3 py-2"
-                                  style="background-color: #dc3545 !important;
-                                         color: white !important;
-                                         font-weight: 600">ملغي</span>
+                            <span class="badge bg-danger text-white px-3 py-2 fs-6">ملغي</span>
                         {% endif %}
                     </div>
-                </div>
-            </div>
-        </div>
-        <!-- إحصائيات سريعة -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card border-left-primary shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">إجمالي العناصر</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ cutting_order.total_items }}</div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-list fa-2x text-gray-300"></i>
-                            </div>
+                    <!-- إحصائيات مدمجة -->
+                    <div class="header-stats">
+                        <div class="h-stat">
+                            <div class="h-stat-val">{{ cutting_order.total_items }}</div>
+                            <div class="h-stat-lbl">إجمالي</div>
                         </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card border-left-success shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">مكتملة</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ cutting_order.completed_items }}</div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-check-circle fa-2x text-gray-300"></i>
-                            </div>
+                        <div class="h-stat">
+                            <div class="h-stat-val">{{ cutting_order.completed_items }}</div>
+                            <div class="h-stat-lbl">مكتملة</div>
                         </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card border-left-warning shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">معلقة</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ cutting_order.pending_items }}</div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-clock fa-2x text-gray-300"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card border-left-danger shadow h-100 py-2">
-                    <div class="card-body">
-                        <div class="row no-gutters align-items-center">
-                            <div class="col mr-2">
-                                <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">مرفوضة</div>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ cutting_order.rejected_items }}</div>
-                            </div>
-                            <div class="col-auto">
-                                <i class="fas fa-times-circle fa-2x text-gray-300"></i>
-                            </div>
+                        <div class="h-stat">
+                            <div class="h-stat-val">{{ cutting_order.pending_items }}</div>
+                            <div class="h-stat-lbl">معلقة</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <!-- العمليات المجمعة - تظهر فقط إذا لم يكن الأمر مكتملاً -->
+        </div><!-- /col-lg-6 header -->
         {% if cutting_order.status != 'completed' %}
-            <div class="card bulk-actions mb-4">
+        <div class="col-lg-6">
+            <div class="card bulk-actions h-100 shadow-sm">
                 <div class="card-body">
-                    <h6 class="font-weight-bold text-primary mb-3">
-                        <i class="fas fa-tasks"></i>
+                    <h6 class="fw-bold mb-3" style="color:var(--primary,#8B735A)">
+                        <i class="fas fa-tasks me-1"></i>
                         العمليات المجمعة
                     </h6>
-                    <form id="bulkForm" class="row align-items-end">
-                        <div class="col-md-2">
-                            <label class="form-label">اسم القصاص</label>
-                            <input type="text"
-                                   id="bulkCutter"
-                                   class="form-control"
-                                   placeholder="اسم القصاص">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">رقم الإذن</label>
-                            <input type="text"
-                                   id="bulkPermit"
-                                   class="form-control"
-                                   placeholder="رقم الإذن">
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">اسم المستلم</label>
-                            <input type="text"
-                                   id="bulkReceiver"
-                                   class="form-control"
-                                   placeholder="اسم المستلم">
-                        </div>
-                        <div class="col-md-4">
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-secondary me-2"
-                                    onclick="selectAllItems()">
-                                <i class="fas fa-check-square"></i> تحديد الكل
-                            </button>
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-secondary me-2"
-                                    onclick="deselectAllItems()">
-                                <i class="fas fa-square"></i> إلغاء التحديد
-                            </button>
-                            <button type="button" class="btn btn-primary me-2" onclick="bulkUpdate()">
-                                <i class="fas fa-edit"></i> تحديث مجمع
-                            </button>
-                            <button type="button" class="btn btn-success" onclick="bulkComplete()">
-                                <i class="fas fa-check"></i> إكمال مجمع (<span id="selectedCount">0</span>)
-                            </button>
+                    <form id="bulkForm">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">اسم القصاص</label>
+                                <input type="text" id="bulkCutter" class="form-control form-control-sm" placeholder="اسم القصاص">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">رقم الإذن</label>
+                                <input type="text" id="bulkPermit" class="form-control form-control-sm" placeholder="رقم الإذن">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold">اسم المستلم</label>
+                                <input type="text" id="bulkReceiver" class="form-control form-control-sm" placeholder="اسم المستلم">
+                            </div>
+                            <div class="col-6 d-flex align-items-end">
+                                <div class="d-flex flex-wrap gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAllItems()">
+                                        <i class="fas fa-check-square"></i> الكل
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllItems()">
+                                        <i class="fas fa-square"></i> إلغاء
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="bulkUpdate()">
+                                        <i class="fas fa-edit"></i> تحديث مجمع
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-success" onclick="bulkComplete()">
+                                        <i class="fas fa-check"></i> إكمال مجمع (<span id="selectedCount">0</span>)
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
             </div>
+        </div>
         {% endif %}
+        </div><!-- /row header+bulk -->
         <!-- عناصر التقطيع -->
-        <div class="card shadow">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="fas fa-cut"></i>
+        <div class="card shadow-sm" style="border-radius:var(--radius,8px);border:1px solid var(--border,#dee2e6)">
+            <div class="card-header py-2 d-flex justify-content-between align-items-center" style="background:var(--elevated-bg,#f8f9fa)">
+                <h6 class="m-0 fw-bold" style="color:var(--primary,#8B735A);font-size:.9rem">
+                    <i class="fas fa-cut me-1"></i>
                     عناصر التقطيع ({{ cutting_order.items.count }})
                 </h6>
+                <div class="view-toggle btn-group">
+                    <button class="btn btn-outline-secondary btn-sm active" id="btnCardView" onclick="switchView('cards')">
+                        <i class="fas fa-th-large"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" id="btnTableView" onclick="switchView('table')">
+                        <i class="fas fa-table"></i>
+                    </button>
+                </div>
             </div>
-            <div class="card-body">
+            <div class="card-body p-2">
                 {% if cutting_order.items.all %}
-                    <div class="row">
+                    <!-- عرض البطاقات -->
+                    <div id="cardsView" class="row g-2">
                         {% for item in cutting_order.items.all %}
-                            <div class="col-lg-6 col-xl-4 mb-4">
+                            <div class="item-col">
                                 <div class="card item-card {{ item.status }} shadow-sm h-100"
                                      data-item-id="{{ item.id }}"
                                      data-item-status="{{ item.status }}">
                                     <div class="card-header d-flex justify-content-between align-items-center">
                                         <div class="d-flex align-items-center">
                                             {% if item.status == 'pending' %}
-                                                <div class="form-check me-2">
+                                                <div class="form-check me-1">
                                                     <input class="form-check-input item-checkbox"
                                                            type="checkbox"
                                                            id="item_{{ item.id }}"
@@ -355,100 +345,65 @@
                                                            onchange="updateSelectedCount()">
                                                 </div>
                                             {% endif %}
-                                            <h6 class="mb-0 font-weight-bold text-dark">
+                                            <small class="fw-bold" style="color:var(--text-primary,#333)">
                                                 {% if item.is_external %}
-                                                    {{ item.external_fabric_name }} <span class="badge bg-danger">خارجي</span>
+                                                    {{ item.external_fabric_name|truncatechars:20 }} <span class="badge bg-danger" style="font-size:.6rem">خارجي</span>
                                                 {% else %}
-                                                    {{ item.order_item.product.name|truncatechars:30 }}
+                                                    {{ item.order_item.product.name|truncatechars:20 }}
                                                 {% endif %}
-                                            </h6>
+                                            </small>
                                         </div>
                                         {% if item.status == 'completed' %}
-                                            <span class="badge badge-success">مكتمل</span>
+                                            <span class="badge bg-success" style="font-size:.65rem">مكتمل</span>
                                         {% elif item.status == 'rejected' %}
-                                            <span class="badge badge-danger">مرفوض</span>
+                                            <span class="badge bg-danger" style="font-size:.65rem">مرفوض</span>
                                         {% elif item.status == 'in_progress' %}
-                                            <span class="badge badge-info">قيد التقطيع</span>
+                                            <span class="badge bg-info text-white" style="font-size:.65rem">قيد التقطيع</span>
                                         {% else %}
-                                            <span class="badge badge-warning">معلق</span>
+                                            <span class="badge bg-warning text-dark" style="font-size:.65rem">معلق</span>
                                         {% endif %}
                                     </div>
                                     <div class="card-body">
-                                        <!-- معلومات المنتج -->
-                                        <div class="mb-3">
-                                            <p class="text-muted small mb-1">
-                                                <i class="fas fa-weight"></i>
-                                                الكمية:
-                                                {% if item.is_external %}
-                                                    {{ item.quantity }}
-                                                {% else %}
-                                                    {{ item.order_item.get_clean_quantity_display }}
-                                                {% endif %}
-                                                {% if item.additional_quantity > 0 %}+ {{ item.additional_quantity }} إضافية{% endif %}
-                                            </p>
-                                            <p class="text-muted small mb-1">
-                                                <i class="fas fa-tag"></i>
-                                                الكود:
-                                                {% if item.is_external %}
-                                                    -
-                                                {% else %}
-                                                    {{ item.order_item.product.code|default:"غير محدد" }}
-                                                {% endif %}
-                                            </p>
-                                        </div>
-                                        <!-- بيانات التقطيع -->
-                                        {% if item.status == 'completed' %}
-                                            <div class="mb-3">
-                                                <p class="text-success small mb-1">
-                                                    <i class="fas fa-user"></i>
-                                                    القصاص: {{ item.cutter_name }}
-                                                </p>
-                                                <p class="text-success small mb-1">
-                                                    <i class="fas fa-id-card"></i>
-                                                    رقم الإذن: {{ item.permit_number }}
-                                                </p>
-                                                <p class="text-success small mb-1">
-                                                    <i class="fas fa-hand-holding"></i>
-                                                    المستلم: {{ item.receiver_name }}
-                                                </p>
-                                                {% if item.cutting_date %}
-                                                    <p class="text-muted small mb-1">
-                                                        <i class="fas fa-calendar"></i>
-                                                        تاريخ التقطيع: {{ item.cutting_date|date:"d/m/Y H:i" }}
-                                                    </p>
-                                                {% endif %}
-                                            </div>
-                                        {% elif item.status == 'rejected' %}
-                                            <div class="mb-3">
-                                                <p class="text-danger small">
-                                                    <i class="fas fa-exclamation-triangle"></i>
-                                                    سبب الرفض: {{ item.rejection_reason }}
-                                                </p>
-                                            </div>
+                                        <p class="mb-1 d-flex align-items-center gap-1" style="font-size:.85rem">
+                                            <i class="fas fa-ruler text-muted"></i>
+                                            <span class="text-muted">الكمية:</span>
+                                            <strong>{% if item.is_external %}{{ item.quantity }}{% else %}{{ item.order_item.get_clean_quantity_display }}{% endif %}{% if item.additional_quantity > 0 %}+{{ item.additional_quantity }}{% endif %}</strong>
+                                            <small class="text-muted">{% if item.is_external %}م{% elif item.order_item.product.unit == 'meter' %}م{% elif item.order_item.product.unit == 'roll' %}لفة{% elif item.order_item.product.unit == 'kg' %}كغ{% else %}عدد{% endif %}</small>
+                                        </p>
+                                        {% if not item.is_external and item.order_item.product.code %}
+                                        <p class="mb-1 d-flex align-items-center gap-1 text-muted" style="font-size:.8rem">
+                                            <i class="fas fa-barcode"></i>
+                                            <span>{{ item.order_item.product.code }}</span>
+                                        </p>
                                         {% endif %}
-                                        <!-- ملاحظات -->
+                                        {% if item.status == 'completed' %}
+                                            <p class="text-success mb-0" style="font-size:.82rem">
+                                                <i class="fas fa-user"></i> {{ item.cutter_name }}
+                                                <span class="mx-1">|</span>
+                                                <i class="fas fa-hand-holding"></i> {{ item.receiver_name }}
+                                            </p>
+                                        {% elif item.status == 'rejected' %}
+                                            <p class="text-danger mb-0" style="font-size:.82rem">
+                                                <i class="fas fa-exclamation-triangle"></i> {{ item.rejection_reason|truncatechars:40 }}
+                                            </p>
+                                        {% endif %}
                                         {% if item.notes %}
-                                            <div class="mb-3">
-                                                <p class="text-info small">
-                                                    <i class="fas fa-sticky-note"></i>
-                                                    ملاحظات: {{ item.notes }}
-                                                </p>
-                                            </div>
+                                            <p class="text-info mb-0" style="font-size:.8rem">
+                                                <i class="fas fa-sticky-note"></i> {{ item.notes|truncatechars:40 }}
+                                            </p>
                                         {% endif %}
                                     </div>
-                                    <div class="card-footer bg-light">
+                                    <div class="card-footer">
                                         <div class="action-buttons">
                                             {% if item.status == 'pending' or item.status == 'in_progress' %}
-                                                <button class="btn btn-success btn-sm" onclick="completeItem({{ item.id }})">
+                                                <button class="btn btn-success btn-sm py-0 px-2" style="font-size:.75rem" onclick="completeItem({{ item.id }})">
                                                     <i class="fas fa-check"></i> إكمال
                                                 </button>
                                             {% elif item.status == 'completed' %}
-                                                <span class="badge bg-success">
-                                                    <i class="fas fa-check-circle"></i> مكتمل
-                                                </span>
+                                                <span class="badge bg-success" style="font-size:.65rem"><i class="fas fa-check-circle"></i> مكتمل</span>
                                             {% elif item.status == 'rejected' %}
-                                                <button class="btn btn-secondary btn-sm" onclick="resetItem({{ item.id }})">
-                                                    <i class="fas fa-undo"></i> إعادة تعيين
+                                                <button class="btn btn-secondary btn-sm py-0 px-2" style="font-size:.75rem" onclick="resetItem({{ item.id }})">
+                                                    <i class="fas fa-undo"></i> إعادة
                                                 </button>
                                             {% endif %}
                                         </div>
@@ -457,33 +412,84 @@
                             </div>
                         {% endfor %}
                     </div>
+                    <!-- عرض الجدول -->
+                    <div id="tableView" class="table-responsive" style="display:none">
+                        <table class="table table-hover items-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width:30px"></th>
+                                    <th>المنتج</th>
+                                    <th>الكود</th>
+                                    <th>الكمية</th>
+                                    <th>الحالة</th>
+                                    <th>القصاص</th>
+                                    <th>المستلم</th>
+                                    <th>إجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in cutting_order.items.all %}
+                                <tr data-item-id="{{ item.id }}" data-item-status="{{ item.status }}">
+                                    <td>
+                                        {% if item.status == 'pending' %}
+                                            <input class="form-check-input item-checkbox" type="checkbox" value="{{ item.id }}" onchange="updateSelectedCount()">
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.is_external %}
+                                            {{ item.external_fabric_name|truncatechars:25 }} <span class="badge bg-danger" style="font-size:.6rem">خارجي</span>
+                                        {% else %}
+                                            {{ item.order_item.product.name|truncatechars:25 }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{% if item.is_external %}-{% else %}{{ item.order_item.product.code|default:"-" }}{% endif %}</td>
+                                    <td>
+                                        {% if item.is_external %}{{ item.quantity }}{% else %}{{ item.order_item.get_clean_quantity_display }}{% endif %}{% if item.additional_quantity > 0 %} +{{ item.additional_quantity }}{% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.status == 'completed' %}
+                                            <span class="badge bg-success" style="font-size:.7rem">مكتمل</span>
+                                        {% elif item.status == 'rejected' %}
+                                            <span class="badge bg-danger" style="font-size:.7rem">مرفوض</span>
+                                        {% elif item.status == 'in_progress' %}
+                                            <span class="badge bg-info text-white" style="font-size:.7rem">قيد التقطيع</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark" style="font-size:.7rem">معلق</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.cutter_name|default:"-" }}</td>
+                                    <td>{{ item.receiver_name|default:"-" }}</td>
+                                    <td>
+                                        {% if item.status == 'pending' or item.status == 'in_progress' %}
+                                            <button class="btn btn-success btn-sm py-0 px-2" style="font-size:.75rem" onclick="completeItem({{ item.id }})">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        {% elif item.status == 'completed' %}
+                                            <i class="fas fa-check-circle text-success"></i>
+                                        {% elif item.status == 'rejected' %}
+                                            <button class="btn btn-secondary btn-sm py-0 px-2" style="font-size:.75rem" onclick="resetItem({{ item.id }})">
+                                                <i class="fas fa-undo"></i>
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 {% else %}
-                    <div class="text-center py-5">
-                        <i class="fas fa-cut fa-4x text-muted mb-3"></i>
-                        <h5 class="text-muted">لا توجد عناصر للتقطيع</h5>
+                    <div class="text-center py-4">
+                        <i class="fas fa-cut fa-3x text-muted mb-2"></i>
+                        <p class="text-muted">لا توجد عناصر للتقطيع</p>
                     </div>
                 {% endif %}
             </div>
         </div>
-        <!-- أزرار العمليات -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="d-flex justify-content-between">
-                    <a href="{% url 'cutting:order_list' %}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> العودة للقائمة
-                    </a>
-                    <div>
-                        <button class="btn btn-info" onclick="printReport()">
-                            <i class="fas fa-print"></i> طباعة التقرير
-                        </button>
-                        {% if cutting_order.status != 'completed' %}
-                            <button class="btn btn-primary" onclick="refreshStatus()">
-                                <i class="fas fa-sync"></i> تحديث الحالة
-                            </button>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
+        <!-- زر العودة -->
+        <div class="mt-4 mb-3">
+            <a href="{% url 'cutting:order_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-right me-1"></i> العودة للقائمة
+            </a>
         </div>
     </div>
     <!-- Modal لعرض صورة/صور الفاتورة -->
@@ -1003,14 +1009,32 @@ function resetItem(itemId) {
     });
 }
 
-// طباعة التقرير
-function printReport() {
-    window.open(`{% url 'cutting:print_report' 0 %}`.replace('0', '{{ cutting_order.pk }}'), '_blank');
+// تبديل طريقة العرض بين البطاقات والجدول
+function switchView(view) {
+    const cardsView = document.getElementById('cardsView');
+    const tableView = document.getElementById('tableView');
+    const btnCard = document.getElementById('btnCardView');
+    const btnTable = document.getElementById('btnTableView');
+    if (view === 'table') {
+        cardsView.style.display = 'none';
+        tableView.style.display = 'block';
+        btnCard.classList.remove('active');
+        btnTable.classList.add('active');
+        localStorage.setItem('cuttingItemsView', 'table');
+    } else {
+        cardsView.style.display = 'flex';
+        cardsView.style.flexWrap = 'wrap';
+        tableView.style.display = 'none';
+        btnTable.classList.remove('active');
+        btnCard.classList.add('active');
+        localStorage.setItem('cuttingItemsView', 'cards');
+    }
 }
+// استعادة طريقة العرض المحفوظة
+(function(){
+    var saved = localStorage.getItem('cuttingItemsView');
+    if (saved === 'table') switchView('table');
+})();
 
-// تحديث الحالة
-function refreshStatus() {
-    location.reload();
-}
     </script>
 {% endblock %}
