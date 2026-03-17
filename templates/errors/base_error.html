@@ -1,0 +1,173 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block page_title %}خطأ{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}">
+    <link href="{% static 'vendor/fonts/cairo.css' %}" rel="stylesheet">
+    <link href="{% static 'vendor/fontawesome/css/all.min.css' %}" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #8B735A;
+            --accent: #5F4B32;
+            --surface: #F8F6F3;
+            --card-bg: #FFFFFF;
+            --text-primary: #3D3427;
+            --text-secondary: #6D6055;
+            --border: #DED5CE;
+            --separator: #E8DCCA;
+            --light-accent: #D2B48C;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Cairo', 'Tajawal', sans-serif;
+            min-height: 100vh;
+            background: var(--surface);
+            display: flex; align-items: center; justify-content: center;
+            position: relative; overflow: hidden;
+        }
+        .bg-pattern {
+            position: fixed; inset: 0; z-index: 0; opacity: .04;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%235F4B32' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .shape {
+            position: fixed; border-radius: 50%; z-index: 0;
+            animation: drift 12s ease-in-out infinite alternate;
+        }
+        .shape-1 {
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, {% block shape1_color %}rgba(139,115,90,.08){% endblock %}, transparent 70%);
+            top: -100px; right: -80px;
+        }
+        .shape-2 {
+            width: 200px; height: 200px;
+            background: radial-gradient(circle, rgba(210,180,140,.10), transparent 70%);
+            bottom: -60px; left: -40px; animation-delay: 3s;
+        }
+        .shape-3 {
+            width: 150px; height: 150px;
+            background: radial-gradient(circle, rgba(95,75,50,.06), transparent 70%);
+            top: 40%; left: 15%; animation-delay: 6s;
+        }
+        @keyframes drift {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(20px, -15px) scale(1.05); }
+        }
+        .error-card {
+            position: relative; z-index: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 56px 48px;
+            max-width: 520px; width: 92%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(61,52,39,.08), 0 4px 16px rgba(61,52,39,.04);
+        }
+        .icon-wrap {
+            width: 100px; height: 100px;
+            margin: 0 auto 28px;
+            border-radius: 50%;
+            background: {% block icon_bg %}#FDF2E9{% endblock %};
+            display: flex; align-items: center; justify-content: center;
+            animation: pulse-icon 2.5s ease-in-out infinite;
+        }
+        .icon-wrap i {
+            font-size: 42px;
+            color: {% block icon_color %}var(--primary){% endblock %};
+        }
+        @keyframes pulse-icon {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(139,115,90,.12); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 16px rgba(139,115,90,0); }
+        }
+        .error-code {
+            font-size: 80px; font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1; margin-bottom: 8px;
+            letter-spacing: -2px;
+        }
+        .error-title {
+            font-size: 22px; font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+        .divider {
+            width: 60px; height: 3px;
+            background: linear-gradient(90deg, var(--light-accent), var(--primary));
+            border-radius: 4px;
+            margin: 0 auto 24px;
+        }
+        .error-desc {
+            font-size: 15px; color: var(--text-secondary);
+            line-height: 1.8; margin-bottom: 32px;
+        }
+        .btn-group-err { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+        .btn-err {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 12px 28px; border-radius: 12px;
+            font-size: 15px; font-weight: 600; font-family: inherit;
+            text-decoration: none; cursor: pointer;
+            transition: all .25s ease; border: none;
+        }
+        .btn-primary-err {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(139,115,90,.3);
+        }
+        .btn-primary-err:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(139,115,90,.35);
+            color: #fff;
+        }
+        .btn-outline-err {
+            background: transparent;
+            border: 1.5px solid var(--border);
+            color: var(--text-primary);
+        }
+        .btn-outline-err:hover {
+            background: var(--surface);
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 480px) {
+            .error-card { padding: 40px 24px; }
+            .error-code { font-size: 60px; }
+            .error-title { font-size: 18px; }
+            .btn-group-err { flex-direction: column; }
+            .btn-err { width: 100%; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-pattern"></div>
+    <div class="shape shape-1"></div>
+    <div class="shape shape-2"></div>
+    <div class="shape shape-3"></div>
+
+    <div class="error-card">
+        <div class="icon-wrap">
+            <i class="fas {% block icon_class %}fa-exclamation-triangle{% endblock %}"></i>
+        </div>
+        <div class="error-code">{% block error_code %}000{% endblock %}</div>
+        <div class="error-title">{% block error_title %}خطأ{% endblock %}</div>
+        <div class="divider"></div>
+        <div class="error-desc">{% block error_desc %}حدث خطأ غير متوقع.{% endblock %}</div>
+        <div class="btn-group-err">
+            {% block buttons %}
+            <a href="/" class="btn-err btn-primary-err">
+                <i class="fas fa-home"></i> الصفحة الرئيسية
+            </a>
+            <button onclick="history.back()" class="btn-err btn-outline-err">
+                <i class="fas fa-arrow-right"></i> رجوع
+            </button>
+            {% endblock %}
+        </div>
+
+    </div>
+</body>
+</html>

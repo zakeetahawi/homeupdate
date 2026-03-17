@@ -1,10 +1,12 @@
 import logging
 import json
 from datetime import datetime, timedelta
+from functools import wraps
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum
 from django.http import HttpResponse, JsonResponse
@@ -23,6 +25,37 @@ from .models import CuttingOrder, CuttingOrderItem, CuttingReport
 
 
 logger = logging.getLogger(__name__)
+
+
+def _user_can_access_cutting(user):
+    """التحقق من أن المستخدم لديه دور يسمح بالوصول لقسم التقطيع"""
+    if user.is_superuser:
+        return True
+    return getattr(user, "is_warehouse_staff", False)
+
+
+class CuttingAccessMixin(LoginRequiredMixin, UserPassesTestMixin):
+    """Mixin للتحقق من صلاحية الوصول لقسم التقطيع"""
+    raise_exception = True
+
+    def test_func(self):
+        return _user_can_access_cutting(self.request.user)
+
+    def handle_no_permission(self):
+        if self.request.user.is_authenticated:
+            raise PermissionDenied("ليس لديك صلاحية للوصول لقسم التقطيع")
+        return super().handle_no_permission()
+
+
+def cutting_access_required(view_func):
+    """Decorator للتحقق من صلاحية الوصول لقسم التقطيع (للـ function-based views)"""
+    @wraps(view_func)
+    @login_required
+    def _wrapped(request, *args, **kwargs):
+        if not _user_can_access_cutting(request.user):
+            raise PermissionDenied("ليس لديك صلاحية للوصول لقسم التقطيع")
+        return view_func(request, *args, **kwargs)
+    return _wrapped
 
 def get_user_warehouses_for_user(user):
     """Helper function للحصول على المستودعات المتاحة للمستخدم - يدعم مستودعات متعددة"""
@@ -44,7 +77,7 @@ def user_has_warehouse_access(user, warehouse_id):
     return user_warehouses.filter(id=warehouse_id).exists()
 
 
-class CuttingDashboardView(LoginRequiredMixin, TemplateView):
+class CuttingDashboardView(CuttingAccessMixin, TemplateView):
     """لوحة تحكم نظام التقطيع"""
 
     template_name = "cutting/dashboard.html"
@@ -132,7 +165,7 @@ class CuttingDashboardView(LoginRequiredMixin, TemplateView):
         return warehouse_stats
 
 
-class CuttingOrderListView(LoginRequiredMixin, ListView):
+class CuttingOrderListView(CuttingAccessMixin, ListView):
     """قائمة أوامر التقطيع"""
 
     model = CuttingOrder
@@ -335,7 +368,7 @@ class CuttingOrderListView(LoginRequiredMixin, ListView):
         return context
 
 
-class CompletedCuttingOrdersView(LoginRequiredMixin, ListView):
+class CompletedCuttingOrdersView(CuttingAccessMixin, ListView):
     """قائمة أوامر التقطيع المجمعة - مع فلترة حسب الحالة"""
 
     model = CuttingOrder
@@ -423,7 +456,7 @@ class CompletedCuttingOrdersView(LoginRequiredMixin, ListView):
         return context
 
 
-class CuttingOrderDetailView(LoginRequiredMixin, DetailView):
+class CuttingOrderDetailView(CuttingAccessMixin, DetailView):
     """تفاصيل أمر التقطيع"""
 
     model = CuttingOrder
@@ -436,7 +469,7 @@ class CuttingOrderDetailView(LoginRequiredMixin, DetailView):
         ).prefetch_related("items__order_item__product", "items__updated_by")
 
 
-@login_required
+@cutting_access_required
 def cutting_order_detail_by_code(request, cutting_code):
     """عرض تفاصيل أمر التقطيع بالكود"""
     cutting_order = get_object_or_404(
@@ -451,7 +484,7 @@ def cutting_order_detail_by_code(request, cutting_code):
     )
 
 
-@login_required
+@cutting_access_required
 def update_cutting_item(request, pk):
     """تحديث عنصر التقطيع"""
     item = get_object_or_404(CuttingOrderItem, pk=pk)
@@ -504,7 +537,7 @@ def update_cutting_item(request, pk):
     return JsonResponse({"success": False, "message": "طريقة غير مدعومة"})
 
 
-@login_required
+@cutting_access_required
 def complete_cutting_item(request, pk):
     """إكمال عنصر التقطيع"""
     from datetime import date, datetime
@@ -571,7 +604,7 @@ def complete_cutting_item(request, pk):
     return JsonResponse({"success": False, "message": "طريقة غير مدعومة"})
 
 
-@login_required
+@cutting_access_required
 def reject_cutting_item(request, pk):
     """رفض عنصر التقطيع"""
     item = get_object_or_404(CuttingOrderItem, pk=pk)
@@ -596,7 +629,7 @@ def reject_cutting_item(request, pk):
     return JsonResponse({"success": False, "message": "طريقة غير مدعومة"})
 
 
-@login_required
+@cutting_access_required
 def bulk_update_items(request, order_id):
     """تحديث مجمع لعناصر أمر التقطيع"""
     cutting_order = get_object_or_404(CuttingOrder, pk=order_id)
@@ -640,7 +673,7 @@ def bulk_update_items(request, order_id):
     return JsonResponse({"success": False, "message": "طريقة غير مدعومة"})
 
 
-@login_required
+@cutting_access_required
 def bulk_complete_items(request, order_id):
     """إكمال مجمع لعناصر أمر التقطيع المختارة"""
     from datetime import date, datetime
@@ -734,7 +767,7 @@ def bulk_complete_items(request, order_id):
     return JsonResponse({"success": False, "message": "طريقة غير مدعومة"})
 
 
-class CuttingReportsView(LoginRequiredMixin, TemplateView):
+class CuttingReportsView(CuttingAccessMixin, TemplateView):
     """صفحة التقارير"""
 
     template_name = "cutting/reports.html"
@@ -771,7 +804,7 @@ class CuttingReportsView(LoginRequiredMixin, TemplateView):
         return Warehouse.objects.filter(is_active=True)
 
 
-@login_required
+@cutting_access_required
 def generate_cutting_report(request):
     """إنشاء تقرير تقطيع"""
     if request.method == "POST":
@@ -831,7 +864,7 @@ def generate_cutting_report(request):
     return JsonResponse({"success": False, "message": "طريقة غير مدعومة"})
 
 
-@login_required
+@cutting_access_required
 def daily_cutting_report(request, warehouse_id):
     """تقرير يومي للتقطيع"""
     # التحقق من صلاحية المستخدم للوصول للمستودع
@@ -874,7 +907,7 @@ def daily_cutting_report(request, warehouse_id):
     return render(request, "cutting/daily_report.html", context)
 
 
-@login_required
+@cutting_access_required
 def print_daily_delivery_report(request, date, receiver):
     """طباعة تقرير التسليم اليومي لمستلم محدد"""
     date_obj = datetime.strptime(date, "%Y-%m-%d").date()
@@ -902,7 +935,7 @@ def print_daily_delivery_report(request, date, receiver):
     return render(request, "cutting/print_daily_delivery.html", context)
 
 
-@login_required
+@cutting_access_required
 def warehouse_cutting_stats(request, warehouse_id):
     """إحصائيات المستودع API"""
     # التحقق من صلاحية المستخدم للوصول للمستودع
@@ -938,7 +971,7 @@ def warehouse_cutting_stats(request, warehouse_id):
     )
 
 
-@login_required
+@cutting_access_required
 def get_item_status(request, item_id):
     """الحصول على حالة عنصر التقطيع API"""
     item = get_object_or_404(CuttingOrderItem, pk=item_id)
@@ -962,7 +995,7 @@ def get_item_status(request, item_id):
     )
 
 
-class CuttingReceiptView(LoginRequiredMixin, ListView):
+class CuttingReceiptView(CuttingAccessMixin, ListView):
     """صفحة استلام أوامر التقطيع الجاهزة للاستلام"""
 
     template_name = "cutting/cutting_receipt.html"
@@ -1064,7 +1097,7 @@ class CuttingReceiptView(LoginRequiredMixin, ListView):
         return context
 
 
-@login_required
+@cutting_access_required
 def receive_cutting_order_ajax(request, cutting_order_id):
     """استلام أمر تقطيع عبر AJAX"""
     if request.method != "POST":
@@ -1158,7 +1191,7 @@ def receive_cutting_order_ajax(request, cutting_order_id):
         return JsonResponse({"success": False, "message": f"حدث خطأ: {str(e)}"})
 
 
-@login_required
+@cutting_access_required
 def cutting_notifications_api(request):
     """API للإشعارات المتعلقة بالتقطيع"""
     try:
@@ -1188,7 +1221,7 @@ def cutting_notifications_api(request):
         return JsonResponse({"success": False, "message": f"حدث خطأ: {str(e)}"})
 
 
-class WarehouseSettingsView(LoginRequiredMixin, TemplateView):
+class WarehouseSettingsView(CuttingAccessMixin, TemplateView):
     """إعدادات المستودعات"""
 
     template_name = "cutting/warehouse_settings.html"
@@ -1199,7 +1232,7 @@ class WarehouseSettingsView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class UserPermissionsView(LoginRequiredMixin, TemplateView):
+class UserPermissionsView(CuttingAccessMixin, TemplateView):
     """إعدادات صلاحيات المستخدمين"""
 
     template_name = "cutting/user_permissions.html"
@@ -1215,7 +1248,7 @@ class UserPermissionsView(LoginRequiredMixin, TemplateView):
         return context
 
 
-@login_required
+@cutting_access_required
 def print_cutting_report(request, report_id):
     """طباعة تقرير التقطيع المفصل"""
     from django.db.models import Count, Q, Sum
@@ -1307,7 +1340,7 @@ def print_cutting_report(request, report_id):
     return render(request, "cutting/print_report.html", context)
 
 
-@login_required
+@cutting_access_required
 def create_cutting_order_from_order(request, order_id):
     """إنشاء أمر تقطيع من طلب موجود"""
     if request.method == "POST":
@@ -1355,7 +1388,7 @@ def create_cutting_order_from_order(request, order_id):
     return JsonResponse({"success": False, "message": "طريقة غير مدعومة"})
 
 
-@login_required
+@cutting_access_required
 def start_cutting_order(request, order_id):
     """بدء أمر التقطيع"""
     if request.method == "POST":
@@ -1405,7 +1438,7 @@ def start_cutting_order(request, order_id):
     return JsonResponse({"success": False, "message": "طريقة غير مدعومة"})
 
 
-@login_required
+@cutting_access_required
 def quick_stats_api(request):
     """API للإحصائيات السريعة في صفحة التقارير"""
     try:

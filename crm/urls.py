@@ -21,6 +21,10 @@ from .views_health import health_check
 
 # تم حذف test_completion_view
 
+# Custom error handlers
+handler403 = "crm.views.custom_403"
+handler404 = "crm.views.custom_404"
+handler500 = "crm.views.custom_500"
 
 # تعريف المسارات الرئيسية
 urlpatterns = [
