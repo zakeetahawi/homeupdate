@@ -6,7 +6,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -440,6 +440,22 @@ class Order(SoftDeleteMixin, models.Model):
         blank=True,
         null=True,
         verbose_name="ملاحظات الخصم الإداري",
+    )
+
+    # كود الخصم الترويجي
+    promo_code = models.ForeignKey(
+        "orders.PromoCode",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+        verbose_name="كود الخصم المُطبق",
+    )
+    promo_discount_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name="قيمة خصم البرومو كود",
     )
 
     modified_at = models.DateTimeField(auto_now=True, help_text="آخر تحديث للطلب")
@@ -3561,6 +3577,146 @@ class OrderModificationLog(models.Model):
         if self.new_total_amount is not None:
             return f"{self.new_total_amount} ج.م"
         return "غير محدد"
+
+
+class PromoCode(models.Model):
+    """كود خصم ترويجي - يُصدر من مستخدم مُصرّح ويُستخدم لمرة واحدة"""
+
+    STATUS_CHOICES = [
+        ("active", "فعّال"),
+        ("used", "مُستخدم"),
+        ("expired", "منتهي الصلاحية"),
+        ("cancelled", "ملغي"),
+    ]
+
+    code = models.CharField(
+        max_length=10,
+        unique=True,
+        db_index=True,
+        verbose_name="كود الخصم",
+    )
+    discount_percentage = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(15)],
+        verbose_name="نسبة الخصم %",
+        help_text="نسبة الخصم من 1% إلى 15%",
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default="active",
+        db_index=True,
+        verbose_name="الحالة",
+    )
+
+    # الإصدار
+    issued_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="issued_promo_codes",
+        verbose_name="صادر من",
+    )
+    issued_at = models.DateTimeField(auto_now_add=True, verbose_name="تاريخ الإصدار")
+    issue_notes = models.TextField(blank=True, verbose_name="ملاحظات الإصدار")
+
+    # الصلاحية
+    expires_at = models.DateTimeField(verbose_name="ينتهي في")
+
+    # الاستخدام
+    used_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="used_promo_codes",
+        verbose_name="استُخدم بواسطة",
+    )
+    used_at = models.DateTimeField(null=True, blank=True, verbose_name="تاريخ الاستخدام")
+    used_for_customer = models.ForeignKey(
+        "customers.Customer",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="used_promo_codes",
+        verbose_name="العميل المُستخدم له",
+    )
+    used_in_order = models.ForeignKey(
+        "orders.Order",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="applied_promo_codes",
+        verbose_name="الطلب المُطبق فيه",
+    )
+
+    # إرسال الكود
+    sent_to_customer = models.ForeignKey(
+        "customers.Customer",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="received_promo_codes",
+        verbose_name="أُرسل للعميل",
+    )
+    sent_at = models.DateTimeField(null=True, blank=True, verbose_name="تاريخ الإرسال")
+    sent_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sent_promo_codes",
+        verbose_name="أُرسل بواسطة",
+    )
+
+    class Meta:
+        verbose_name = "كود خصم"
+        verbose_name_plural = "أكواد الخصم"
+        ordering = ["-issued_at"]
+        indexes = [
+            models.Index(fields=["code", "status"], name="promo_code_status_idx"),
+            models.Index(fields=["status", "expires_at"], name="promo_status_exp_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.code} ({self.discount_percentage}%)"
+
+    @property
+    def is_valid(self):
+        """هل الكود صالح للاستخدام؟"""
+        if self.status != "active":
+            return False
+        if self.expires_at and timezone.now() > self.expires_at:
+            return False
+        return True
+
+    @staticmethod
+    def generate_code():
+        """توليد كود فريد بصيغة XXXXXX"""
+        import secrets
+
+        alphabet = "ABCDEFGHJKMNPQRSTVWXYZ23456789"
+        for _ in range(100):
+            code = "".join(secrets.choice(alphabet) for _ in range(6))
+            if not PromoCode.objects.filter(code=code).exists():
+                return code
+        raise ValueError("فشل في توليد كود فريد")
+
+    def mark_used(self, user, customer, order):
+        """تحديد الكود كمُستخدم"""
+        self.status = "used"
+        self.used_by = user
+        self.used_at = timezone.now()
+        self.used_for_customer = customer
+        self.used_in_order = order
+        self.save(
+            update_fields=[
+                "status",
+                "used_by",
+                "used_at",
+                "used_for_customer",
+                "used_in_order",
+            ]
+        )
 
 
 # استيراد نماذج العقود

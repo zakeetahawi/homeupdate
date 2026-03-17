@@ -25,6 +25,7 @@ from .models import (
     OrderStatusLog,
     Payment,
     PaymentAllocation,
+    PromoCode,
 )
 
 
@@ -976,3 +977,41 @@ class OrderInvoiceImageAdmin(admin.ModelAdmin):
 
 
 # تم إزالة ContractTemplateAdmin - يرجى استخدام نظام الويزارد لإنشاء العقود
+
+
+@admin.register(PromoCode)
+class PromoCodeAdmin(admin.ModelAdmin):
+    """إدارة أكواد الخصم الترويجية"""
+
+    list_display = (
+        "code",
+        "discount_percentage",
+        "status",
+        "issued_by",
+        "issued_at",
+        "expires_at",
+        "used_for_customer",
+        "used_in_order",
+        "used_at",
+    )
+    list_filter = ("status", "discount_percentage", "issued_at")
+    search_fields = ("code", "issue_notes", "issued_by__first_name", "issued_by__last_name")
+    readonly_fields = ("code", "issued_by", "issued_at", "used_by", "used_at", "used_for_customer", "used_in_order", "sent_to_customer", "sent_at", "sent_by")
+    list_per_page = 50
+
+    fieldsets = (
+        (_("معلومات الكود"), {
+            "fields": ("code", "discount_percentage", "status", "expires_at", "issue_notes"),
+        }),
+        (_("الإصدار"), {
+            "fields": ("issued_by", "issued_at"),
+        }),
+        (_("الاستخدام"), {
+            "fields": ("used_by", "used_at", "used_for_customer", "used_in_order"),
+            "classes": ("collapse",),
+        }),
+        (_("الإرسال"), {
+            "fields": ("sent_to_customer", "sent_at", "sent_by"),
+            "classes": ("collapse",),
+        }),
+    )

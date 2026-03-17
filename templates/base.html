@@ -939,6 +939,9 @@
        href="{% url 'admin:accounts_branchdevice_changelist' %}"><i class="fas fa-list"></i>
 إدارة الأجهزة</a>
 {% endif %}
+{% if user.can_issue_promo_code or user.is_superuser %}
+    <a class="dropdown-item" href="{% url 'orders:promo_code_list' %}"><i class="fas fa-ticket-alt text-success"></i> إدارة أكواد الخصم</a>
+{% endif %}
 <hr class="my-1">
 <a class="dropdown-item" href="{% url 'accounts:logout' %}"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a>
 </div>

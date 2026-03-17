@@ -290,6 +290,22 @@ class DraftOrder(models.Model):
         verbose_name="ملاحظات الخصم الإداري",
     )
 
+    # كود الخصم الترويجي
+    promo_code = models.ForeignKey(
+        "orders.PromoCode",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="draft_orders",
+        verbose_name="كود الخصم المُطبق",
+    )
+    promo_discount_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        verbose_name="قيمة خصم البرومو كود",
+    )
+
     # بيانات إضافية مخزنة كـ JSON
     wizard_state = models.JSONField(
         default=dict,

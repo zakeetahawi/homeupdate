@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}إصدار كود خصم جديد{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 600px;">
+    <div class="card border-0 shadow">
+        <div class="card-header bg-success text-white">
+            <h4 class="mb-0"><i class="fas fa-ticket-alt me-2"></i>إصدار كود خصم جديد</h4>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                <!-- نسبة الخصم -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">نسبة الخصم <span class="text-danger">*</span></label>
+                    <select name="discount_percentage" class="form-select" required>
+                        <option value="">-- اختر نسبة الخصم --</option>
+                        {% for pct in discount_range %}
+                            <option value="{{ pct }}">{{ pct }}%</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- مدة الصلاحية -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">مدة الصلاحية <span class="text-danger">*</span></label>
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <button type="button" class="btn btn-outline-primary w-100 expires-btn" onclick="setExpiry(3, this)">3 أيام</button>
+                        </div>
+                        <div class="col-4">
+                            <button type="button" class="btn btn-outline-primary w-100 expires-btn" onclick="setExpiry(7, this)">أسبوع</button>
+                        </div>
+                        <div class="col-4">
+                            <button type="button" class="btn btn-outline-primary w-100 expires-btn" onclick="setExpiry(14, this)">أسبوعان</button>
+                        </div>
+                        <div class="col-4">
+                            <button type="button" class="btn btn-outline-primary w-100 expires-btn" onclick="setExpiry(30, this)">شهر</button>
+                        </div>
+                        <div class="col-4">
+                            <button type="button" class="btn btn-outline-primary w-100 expires-btn" onclick="setExpiry(60, this)">شهران</button>
+                        </div>
+                        <div class="col-4">
+                            <button type="button" class="btn btn-outline-primary w-100 expires-btn" onclick="setExpiry(90, this)">3 أشهر</button>
+                        </div>
+                    </div>
+                    <input type="hidden" name="expires_days" id="expiresDays" required>
+                    <div id="expiryDisplay" class="mt-2 text-success fw-bold" style="display: none;"></div>
+                </div>
+
+                <!-- إرسال لمستخدم (اختياري) -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">
+                        <i class="fas fa-paper-plane text-primary me-1"></i>إرسال لمستخدم
+                        <small class="text-muted fw-normal">(اختياري)</small>
+                    </label>
+                    <select name="send_to_user" class="form-select" id="sendToUser">
+                        <option value="">-- بدون إرسال --</option>
+                        {% for user in active_users %}
+                            <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text text-muted">سيصل للمستخدم كرسالة داخلية تحتوي على الكود</small>
+                </div>
+
+                <!-- ملاحظات -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">ملاحظات</label>
+                    <textarea name="issue_notes" class="form-control" rows="3" placeholder="سبب إصدار الكود..."></textarea>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-success btn-lg" id="issueBtn">
+                        <i class="fas fa-plus-circle me-2"></i>إصدار الكود
+                    </button>
+                    <a href="{% url 'orders:promo_code_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-right me-2"></i>رجوع
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function setExpiry(days, btn) {
+    document.getElementById('expiresDays').value = days;
+    document.querySelectorAll('.expires-btn').forEach(b => {
+        b.classList.remove('btn-primary');
+        b.classList.add('btn-outline-primary');
+    });
+    btn.classList.remove('btn-outline-primary');
+    btn.classList.add('btn-primary');
+
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + days);
+    document.getElementById('expiryDisplay').textContent = 'ينتهي في: ' + expiryDate.toLocaleDateString('ar-EG');
+    document.getElementById('expiryDisplay').style.display = 'block';
+}
+</script>
+{% endblock %}

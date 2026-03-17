@@ -887,6 +887,22 @@ def wizard_add_item(request):
         else:
             quantity = Decimal(str(quantity))
 
+        # التحقق من أصناف المخزن الخدمي والاكسسوار - لا يُطبق عليها خصم البرومو كود
+        EXCLUDED_CATEGORY_NAMES = ["خدمى", "اكسسوار", "الاكسسوار"]
+        promo_excluded = False
+        if discount_percentage > 0 and draft.promo_code_id:
+            product_category_name = ""
+            if product.category_id:
+                if "category" in product._state.fields_cache:
+                    product_category_name = product.category.name
+                else:
+                    from inventory.models import Category
+                    cat = Category.objects.filter(pk=product.category_id).values_list("name", flat=True).first()
+                    product_category_name = cat or ""
+            if product_category_name in EXCLUDED_CATEGORY_NAMES:
+                discount_percentage = Decimal("0.00")
+                promo_excluded = True
+
         # حساب مبلغ الخصم
         total_price = quantity * unit_price
         discount_amount = total_price * (discount_percentage / Decimal("100.0"))
@@ -925,7 +941,8 @@ def wizard_add_item(request):
         return JsonResponse(
             {
                 "success": True,
-                "message": "تم إضافة العنصر بنجاح",
+                "message": "تم إضافة العنصر بنجاح" if not promo_excluded else "تم إضافة العنصر بدون خصم (صنف خدمي/اكسسوار)",
+                "promo_excluded": promo_excluded,
                 "item": {
                     "id": item.id,
                     "product_name": product.name,
@@ -935,6 +952,7 @@ def wizard_add_item(request):
                     "total_price": float(item.total_price),
                     "discount_amount": float(item.discount_amount),
                     "final_price": float(item.final_price),
+                    "category": product.category.name if product.category_id else "",
                 },
                 "totals": {
                     "subtotal": float(totals["subtotal"]),
@@ -1688,6 +1706,10 @@ def wizard_finalize(request):
                 order.administrative_discount_date = draft.administrative_discount_date
                 order.administrative_discount_notes = draft.administrative_discount_notes
 
+                # نسخ كود الخصم الترويجي
+                order.promo_code = draft.promo_code
+                order.promo_discount_amount = draft.promo_discount_amount or Decimal("0.00")
+
                 # حفظ الإضافات المالية إذا كانت موجودة، وإلا تعيينها كصفر
                 if order.financial_addition is None:
                     order.financial_addition = Decimal("0.00")
@@ -2088,6 +2110,8 @@ def wizard_finalize(request):
                 administrative_discount_by=draft.administrative_discount_by,
                 administrative_discount_date=draft.administrative_discount_date,
                 administrative_discount_notes=draft.administrative_discount_notes,
+                promo_code=draft.promo_code,
+                promo_discount_amount=draft.promo_discount_amount or Decimal("0.00"),
                 financial_addition=Decimal("0.00"),
                 contract_file=draft.contract_file,
                 invoice_image=draft.invoice_image,
@@ -2191,6 +2215,14 @@ def wizard_finalize(request):
         DraftOrder.objects.filter(pk=draft.pk).update(
             is_completed=True, completed_at=timezone.now(), final_order=order
         )
+
+        # تحديث حالة كود الخصم الترويجي
+        if draft.promo_code and draft.promo_code.status == "active":
+            draft.promo_code.mark_used(
+                user=request.user,
+                customer=draft.customer,
+                order=order,
+            )
 
         # ⚡ معالجة الأقمشة الخارجية (External Fabrics)
         # يجب استدعاؤها هنا لأن الإشارة (Signal) انطلقت قبل نقل الستائر للطلب

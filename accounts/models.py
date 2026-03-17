@@ -261,6 +261,11 @@ class User(AbstractUser):
         verbose_name=_("صلاحية الخصم الإداري"),
         help_text=_("السماح للمستخدم بتطبيق خصم إداري على الطلبات"),
     )
+    can_issue_promo_code = models.BooleanField(
+        default=False,
+        verbose_name=_("إصدار أكواد خصم"),
+        help_text=_("السماح للمستخدم بإنشاء أكواد خصم ترويجية"),
+    )
     authorized_devices = models.ManyToManyField(
         "BranchDevice",
         blank=True,

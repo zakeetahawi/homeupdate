@@ -198,6 +198,7 @@ def _handle_user_edit_post(request, user_obj):
     user_obj.can_apply_administrative_discount = (
         "can_apply_administrative_discount" in request.POST
     )
+    user_obj.can_issue_promo_code = "can_issue_promo_code" in request.POST
     user_obj.is_wholesale = "is_wholesale" in request.POST
     user_obj.is_retail = "is_retail" in request.POST
 

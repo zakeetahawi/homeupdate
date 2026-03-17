@@ -237,6 +237,12 @@
                             </div>
                             <div class="col-md-4">
                                 <div class="form-check form-switch">
+                                    <input type="checkbox" name="can_issue_promo_code" id="can_issue_promo_code" class="form-check-input" {% if user_obj.can_issue_promo_code %}checked{% endif %}>
+                                    <label for="can_issue_promo_code" class="form-check-label small"><i class="fas fa-ticket-alt me-1 text-success"></i>إصدار أكواد خصم</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
                                     <input type="checkbox" name="is_wholesale" id="is_wholesale" class="form-check-input" {% if user_obj.is_wholesale %}checked{% endif %}>
                                     <label for="is_wholesale" class="form-check-label small"><i class="fas fa-boxes me-1 text-primary"></i>جملة</label>
                                 </div>

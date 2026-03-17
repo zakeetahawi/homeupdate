@@ -6,6 +6,7 @@ from . import (
     dashboard_views,
     edit_tracking_views,
     invoice_views,
+    promo_views,
     views,
     wizard_views,
 )
@@ -342,5 +343,40 @@ urlpatterns = [
         "secure/invoice-image/<int:image_id>/",
         views.download_invoice_image,
         name="download_invoice_image",
+    ),
+    # أكواد الخصم الترويجية
+    path("promo-codes/", promo_views.promo_code_list, name="promo_code_list"),
+    path("promo-codes/export/", promo_views.promo_code_export, name="promo_code_export"),
+    path("promo-codes/issue/", promo_views.promo_code_issue, name="promo_code_issue"),
+    path(
+        "promo-codes/<int:code_id>/cancel/",
+        promo_views.promo_code_cancel,
+        name="promo_code_cancel",
+    ),
+    path(
+        "promo-codes/<int:code_id>/send/",
+        promo_views.promo_code_send,
+        name="promo_code_send",
+    ),
+    path(
+        "promo-codes/customer-search/",
+        promo_views.customer_search_api,
+        name="promo_customer_search",
+    ),
+    # Wizard promo code AJAX
+    path(
+        "wizard/verify-promo-code/",
+        promo_views.promo_code_verify,
+        name="wizard_verify_promo_code",
+    ),
+    path(
+        "wizard/apply-promo-code/",
+        promo_views.promo_code_apply,
+        name="wizard_apply_promo_code",
+    ),
+    path(
+        "wizard/remove-promo-code/",
+        promo_views.promo_code_remove,
+        name="wizard_remove_promo_code",
     ),
 ]

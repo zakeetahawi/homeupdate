@@ -160,6 +160,7 @@ class CustomUserAdmin(UserAdmin):
         "can_export",
         "can_edit_price",
         "can_apply_administrative_discount",
+        "can_issue_promo_code",
     )
 
     def get_queryset(self, request):
@@ -195,6 +196,7 @@ class CustomUserAdmin(UserAdmin):
         "can_export",
         "can_edit_price",
         "can_apply_administrative_discount",
+        "can_issue_promo_code",
     )
     search_fields = ("username", "first_name", "last_name", "email", "phone")
     filter_horizontal = (
@@ -301,6 +303,7 @@ class CustomUserAdmin(UserAdmin):
                     "can_export",
                     "can_edit_price",
                     "can_apply_administrative_discount",
+                    "can_issue_promo_code",
                 ),
                 "description": _("صلاحيات خاصة يمكن منحها لأي مستخدم"),
                 "classes": ("collapse",),

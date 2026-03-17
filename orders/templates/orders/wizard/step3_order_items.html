@@ -72,14 +72,49 @@
                         </div>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-bold">الخصم</label>
-                            <select id="item-discount" class="form-select">
-                                {% for i in "0123456789012345"|make_list %}
-                                    <option value="{{ forloop.counter0 }}">{{ forloop.counter0 }}%</option>
-                                {% endfor %}
+                        <!-- حقل الخصم (مخفي - يظهر فقط بعد برومو كود صالح) -->
+                        <div class="col-md-6 mb-3" id="discount-section" style="display: none;">
+                            <label class="form-label fw-bold text-success">
+                                <i class="fas fa-percentage me-1"></i>الخصم المُطبق
+                            </label>
+                            <div class="input-group">
+                                <input type="text" id="item-discount-display"
+                                       class="form-control text-center fw-bold fs-5"
+                                       readonly
+                                       style="background: #d4edda;">
+                                <span class="input-group-text">%</span>
+                                <button type="button" class="btn btn-outline-danger"
+                                        onclick="clearPromoCode()" title="إزالة كود الخصم">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                            <small class="text-success">
+                                <i class="fas fa-user me-1"></i>صادر من: <span id="promo-issued-by"></span>
+                            </small>
+                            <select id="item-discount" class="form-select" style="display: none;">
+                                <option value="0" selected>0%</option>
                             </select>
                         </div>
+
+                        <!-- حقل البرومو كود (يظهر افتراضياً) -->
+                        <div class="col-md-6 mb-3" id="promo-code-section">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-ticket-alt text-success me-1"></i>كود الخصم
+                            </label>
+                            <div class="input-group">
+                                <input type="text" id="promo-code-input"
+                                       class="form-control text-center"
+                                       placeholder="أدخل كود الخصم..."
+                                       maxlength="10" dir="ltr"
+                                       style="letter-spacing: 3px; font-weight: bold; font-size: 1.1rem;">
+                                <button type="button" class="btn btn-success"
+                                        id="verify-promo-btn" onclick="verifyPromoCode()">
+                                    <i class="fas fa-check-circle me-1"></i>تحقق
+                                </button>
+                            </div>
+                            <small id="promo-feedback" class="form-text"></small>
+                        </div>
+
                         <div class="col-md-6 mb-3 d-flex align-items-end">
                             <button type="button" class="btn btn-success w-100" onclick="addItem()">
                                 <i class="fas fa-plus me-2"></i>إضافة
@@ -115,6 +150,9 @@
                                         {% if item.added_by and item.added_by != draft.created_by %}class="table-warning"{% endif %}>
                                         <td>
                                             {{ item.product.name }}
+                                            {% if item.product.category.name == "خدمى" or item.product.category.name == "اكسسوار" or item.product.category.name == "الاكسسوار" %}
+                                                <span class="badge bg-secondary" title="لا يُطبق خصم"><i class="fas fa-ban"></i> بدون خصم</span>
+                                            {% endif %}
                                             {% if item.added_by and item.added_by != draft.created_by %}
                                                 <br>
                                                 <small class="badge bg-warning text-dark">
@@ -651,6 +689,16 @@ function addItem() {
             addItemToTable(data.item);
             updateTotals(data.totals);
             clearForm();
+            // تنبيه إذا تم استبعاد الصنف من الخصم
+            if (data.promo_excluded) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-warning alert-dismissible fade show mt-2';
+                alertDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>' +
+                    '<strong>' + data.item.product_name + '</strong>: صنف خدمي/اكسسوار - لا يُطبق عليه خصم البرومو كود' +
+                    '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                document.querySelector('#promo-code-section, #discount-section')?.closest('.row')?.after(alertDiv);
+                setTimeout(() => alertDiv.remove(), 5000);
+            }
         } else {
             alert(data.message || 'حدث خطأ');
         }
@@ -686,8 +734,11 @@ function addItemToTable(item) {
     const tbody = document.getElementById('items-tbody');
     const row = document.createElement('tr');
     row.dataset.itemId = item.id;
+    // تمييز الأصناف المستبعدة من الخصم
+    const EXCLUDED_CATS = ['خدمى', 'اكسسوار', 'الاكسسوار'];
+    const isExcluded = item.category && EXCLUDED_CATS.includes(item.category);
     row.innerHTML = `
-        <td>${item.product_name}</td>
+        <td>${item.product_name}${isExcluded ? ' <span class="badge bg-secondary" title="لا يُطبق خصم"><i class="fas fa-ban"></i> بدون خصم</span>' : ''}</td>
         <td>${formatNumber(item.quantity, 3)}</td>
         <td>${formatPrice(item.unit_price)}</td>
         <td>${formatNumber(item.discount_percentage, 2)}%</td>
@@ -796,7 +847,13 @@ function clearForm() {
     $('#product-select').val(null).trigger('change');
     $('#item-quantity').val('1');
     $('#item-price').val('0');
-    $('#item-discount').val('0');
+    
+    // الحفاظ على خصم البرومو كود إن وُجد
+    if (!appliedPromoCode) {
+        $('#item-discount').val('0');
+    } else {
+        $('#item-discount').val(appliedDiscount);
+    }
     
     const manualCheck = document.getElementById('manual-price-check');
     if (manualCheck && manualCheck.checked) {
@@ -993,6 +1050,149 @@ window.addScannedProductToWizard = function(productId, productName, productCode,
 };
 
     </script>
+
+    <!-- Promo Code Script -->
+    <script>
+    let appliedPromoCode = null;
+    let appliedDiscount = 0;
+
+    {% if draft.promo_code %}
+    // كود مطبق مسبقاً
+    document.addEventListener('DOMContentLoaded', function() {
+        appliedPromoCode = '{{ draft.promo_code.code }}';
+        appliedDiscount = {{ draft.promo_code.discount_percentage }};
+        showAppliedPromo(
+            '{{ draft.promo_code.code }}',
+            {{ draft.promo_code.discount_percentage }},
+            '{{ draft.promo_code.issued_by.get_full_name|default:"غير معروف" }}'
+        );
+    });
+    {% endif %}
+
+    function verifyPromoCode() {
+        const input = document.getElementById('promo-code-input');
+        const code = input.value.trim().toUpperCase();
+        const feedback = document.getElementById('promo-feedback');
+        const btn = document.getElementById('verify-promo-btn');
+
+        if (!code || code.length < 4) {
+            feedback.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i>أدخل كود صالح (4 أحرف على الأقل)</span>';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        feedback.innerHTML = '';
+
+        fetch('{% url "orders:wizard_verify_promo_code" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ code: code })
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-circle me-1"></i>تحقق';
+
+            if (data.success) {
+                // تطبيق الكود
+                applyPromoToWizard(data.code, data.discount_percentage, data.issued_by);
+            } else {
+                feedback.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>' + data.message + '</span>';
+                input.classList.add('is-invalid');
+                setTimeout(() => input.classList.remove('is-invalid'), 3000);
+            }
+        })
+        .catch(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-circle me-1"></i>تحقق';
+            feedback.innerHTML = '<span class="text-danger">حدث خطأ في الاتصال</span>';
+        });
+    }
+
+    function applyPromoToWizard(code, discountPct, issuedBy) {
+        fetch('{% url "orders:wizard_apply_promo_code" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ code: code })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showAppliedPromo(code, discountPct, issuedBy);
+            } else {
+                document.getElementById('promo-feedback').innerHTML =
+                    '<span class="text-danger">' + data.message + '</span>';
+            }
+        });
+    }
+
+    function showAppliedPromo(code, discountPct, issuedBy) {
+        appliedPromoCode = code;
+        appliedDiscount = discountPct;
+
+        // إخفاء حقل الإدخال وإظهار حقل العرض
+        document.getElementById('promo-code-section').style.display = 'none';
+        document.getElementById('discount-section').style.display = 'block';
+        document.getElementById('item-discount-display').value = discountPct;
+        document.getElementById('promo-issued-by').textContent = issuedBy;
+
+        // تحديث الخصم في الـ select المخفي
+        const discountSelect = document.getElementById('item-discount');
+        discountSelect.innerHTML = '<option value="' + discountPct + '" selected>' + discountPct + '%</option>';
+        discountSelect.value = discountPct;
+
+        document.getElementById('promo-feedback').innerHTML = '';
+    }
+
+    function clearPromoCode() {
+        if (!confirm('هل تريد إزالة كود الخصم؟')) return;
+
+        fetch('{% url "orders:wizard_remove_promo_code" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({})
+        })
+        .then(r => r.json())
+        .then(data => {
+            appliedPromoCode = null;
+            appliedDiscount = 0;
+
+            // إظهار حقل الإدخال وإخفاء حقل العرض
+            document.getElementById('promo-code-section').style.display = 'block';
+            document.getElementById('discount-section').style.display = 'none';
+            document.getElementById('promo-code-input').value = '';
+
+            // تصفير الخصم
+            const discountSelect = document.getElementById('item-discount');
+            discountSelect.innerHTML = '<option value="0" selected>0%</option>';
+            discountSelect.value = '0';
+        });
+    }
+
+    // التحقق عند الضغط على Enter
+    document.getElementById('promo-code-input')?.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            verifyPromoCode();
+        }
+    });
+
+    // تحويل تلقائي للأحرف الكبيرة
+    document.getElementById('promo-code-input')?.addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+    });
+    </script>
+
     <!-- Modal الباركود للويزارد -->
     {% include 'includes/wizard_barcode_scanner_modal.html' %}
 {% endblock %}

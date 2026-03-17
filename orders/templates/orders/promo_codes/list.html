@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}أكواد الخصم{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1"><i class="fas fa-ticket-alt text-success me-2"></i>إدارة أكواد الخصم</h3>
+            <p class="text-muted mb-0">إصدار وتتبع أكواد الخصم الترويجية</p>
+        </div>
+        <a href="{% url 'orders:promo_code_issue' %}" class="btn btn-success btn-lg">
+            <i class="fas fa-plus me-2"></i>إصدار كود جديد
+        </a>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-3">
+                    <div class="h2 mb-0 text-primary">{{ stats.total }}</div>
+                    <small class="text-muted">إجمالي الأكواد</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-3">
+                    <div class="h2 mb-0 text-success">{{ stats.active }}</div>
+                    <small class="text-muted">فعّالة</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-3">
+                    <div class="h2 mb-0 text-info">{{ stats.used }}</div>
+                    <small class="text-muted">مُستخدمة</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card border-0 shadow-sm text-center">
+                <div class="card-body py-3">
+                    <div class="h2 mb-0 text-danger">{{ stats.expired|add:stats.cancelled }}</div>
+                    <small class="text-muted">منتهية / ملغاة</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body py-2">
+            <form method="get" id="filterForm" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-0">بحث</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" name="q" class="form-control" placeholder="الكود، المُصدر، العميل..." value="{{ search_query }}">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted mb-0">الحالة</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">الكل</option>
+                        <option value="active" {% if status_filter == "active" %}selected{% endif %}>فعّال</option>
+                        <option value="used" {% if status_filter == "used" %}selected{% endif %}>مُستخدم</option>
+                        <option value="expired" {% if status_filter == "expired" %}selected{% endif %}>منتهي</option>
+                        <option value="cancelled" {% if status_filter == "cancelled" %}selected{% endif %}>ملغي</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted mb-0">المُصدر</label>
+                    <select name="issued_by" class="form-select form-select-sm">
+                        <option value="">الكل</option>
+                        {% for issuer in issuers %}
+                        <option value="{{ issuer.id }}" {% if issued_by_filter == issuer.id|stringformat:"d" %}selected{% endif %}>{{ issuer.first_name }} {{ issuer.last_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <label class="form-label small text-muted mb-0">الخصم</label>
+                    <select name="discount" class="form-select form-select-sm">
+                        <option value="">الكل</option>
+                        {% for pct in discount_range %}
+                        <option value="{{ pct }}" {% if discount_filter == pct|stringformat:"d" %}selected{% endif %}>{{ pct }}%</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted mb-0">من تاريخ</label>
+                    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted mb-0">إلى تاريخ</label>
+                    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}">
+                </div>
+                <div class="col-12 d-flex gap-2 mt-2">
+                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter me-1"></i>فلترة</button>
+                    {% if search_query or status_filter or issued_by_filter or discount_filter or date_from or date_to %}
+                    <a href="{% url 'orders:promo_code_list' %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-times me-1"></i>مسح الفلاتر</a>
+                    {% endif %}
+                    <button type="button" class="btn btn-success btn-sm ms-auto" onclick="exportToExcel()">
+                        <i class="fas fa-file-excel me-1"></i>تصدير Excel
+                        {% if filtered_count %}<span class="badge bg-light text-success ms-1">{{ filtered_count }}</span>{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>الكود</th>
+                            <th>الخصم</th>
+                            <th>الحالة</th>
+                            <th>صادر من</th>
+                            <th>تاريخ الإصدار</th>
+                            <th>ينتهي في</th>
+                            <th>أُرسل لـ</th>
+                            <th>استُخدم بواسطة</th>
+                            <th>في الطلب</th>
+                            <th>إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for promo in promo_codes %}
+                        <tr>
+                            <td>
+                                <code class="fs-5 fw-bold" style="letter-spacing: 2px;">{{ promo.code }}</code>
+                            </td>
+                            <td>
+                                <span class="badge bg-success fs-6">{{ promo.discount_percentage }}%</span>
+                            </td>
+                            <td>
+                                {% if promo.status == "active" %}
+                                    <span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>فعّال</span>
+                                {% elif promo.status == "used" %}
+                                    <span class="badge bg-info"><i class="fas fa-check-double me-1"></i>مُستخدم</span>
+                                {% elif promo.status == "expired" %}
+                                    <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>منتهي</span>
+                                {% elif promo.status == "cancelled" %}
+                                    <span class="badge bg-danger"><i class="fas fa-ban me-1"></i>ملغي</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ promo.issued_by.get_full_name|default:"—" }}</td>
+                            <td>{{ promo.issued_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                {% if promo.expires_at %}
+                                    <span class="{% if promo.expires_at < now %}text-danger{% endif %}">
+                                        {{ promo.expires_at|date:"Y-m-d" }}
+                                    </span>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if promo.sent_to_customer %}
+                                    <small>{{ promo.sent_to_customer.name }}</small>
+                                    <br><small class="text-muted">{{ promo.sent_at|date:"m-d H:i" }}</small>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if promo.used_for_customer %}
+                                    <small>{{ promo.used_for_customer.name }}</small>
+                                    <br><small class="text-muted">{{ promo.used_at|date:"m-d H:i" }}</small>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if promo.used_in_order %}
+                                    <a href="{% url 'orders:order_detail_by_number' promo.used_in_order.order_number %}" class="text-primary">
+                                        {{ promo.used_in_order.order_number }}
+                                    </a>
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if promo.status == "active" %}
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-primary" onclick="openSendModal({{ promo.id }}, '{{ promo.code }}')" title="إرسال للعميل">
+                                            <i class="fab fa-whatsapp"></i>
+                                        </button>
+                                        <form method="post" action="{% url 'orders:promo_code_cancel' promo.id %}" class="d-inline" onsubmit="return confirm('هل تريد إلغاء كود الخصم {{ promo.code }}؟')">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-outline-danger" title="إلغاء">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% elif promo.status == "used" %}
+                                    <span class="text-muted small">تم الاستخدام</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                <i class="fas fa-ticket-alt fa-3x mb-3 d-block opacity-25"></i>
+                                لا توجد أكواد خصم بعد
+                                <br>
+                                <a href="{% url 'orders:promo_code_issue' %}" class="btn btn-success mt-3">
+                                    <i class="fas fa-plus me-1"></i>إصدار كود جديد
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Send Modal -->
+<div class="modal fade" id="sendPromoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fab fa-whatsapp me-2"></i>إرسال كود الخصم</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>إرسال كود الخصم <code id="sendPromoCode" class="fs-5 fw-bold"></code> للعميل:</p>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">اختر العميل <span class="text-danger">*</span></label>
+                    <input type="text" id="customerSearchInput" class="form-control" placeholder="اكتب 3 حروف على الأقل للبحث...">
+                    <div id="customerSearchResults" class="list-group mt-1" style="max-height: 200px; overflow-y: auto;"></div>
+                    <input type="hidden" id="selectedCustomerId">
+                    <div id="selectedCustomerName" class="mt-2 fw-bold text-success" style="display: none;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-success" id="sendPromoBtn" onclick="sendPromoCode()" disabled>
+                    <i class="fab fa-whatsapp me-1"></i>إرسال
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentPromoId = null;
+
+function openSendModal(promoId, code) {
+    currentPromoId = promoId;
+    document.getElementById('sendPromoCode').textContent = code;
+    document.getElementById('customerSearchInput').value = '';
+    document.getElementById('selectedCustomerId').value = '';
+    document.getElementById('selectedCustomerName').style.display = 'none';
+    document.getElementById('customerSearchResults').innerHTML = '';
+    document.getElementById('sendPromoBtn').disabled = true;
+    new bootstrap.Modal(document.getElementById('sendPromoModal')).show();
+}
+
+// بحث العملاء
+let searchTimeout;
+document.getElementById('customerSearchInput').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    const q = this.value.trim();
+    const resultsDiv = document.getElementById('customerSearchResults');
+
+    if (q.length < 3) {
+        resultsDiv.innerHTML = '';
+        return;
+    }
+
+    searchTimeout = setTimeout(() => {
+        fetch(`{% url 'orders:promo_customer_search' %}?q=${encodeURIComponent(q)}`)
+            .then(r => r.json())
+            .then(data => {
+                resultsDiv.innerHTML = '';
+                if (data.results.length === 0) {
+                    resultsDiv.innerHTML = '<div class="list-group-item text-muted">لا توجد نتائج</div>';
+                    return;
+                }
+                data.results.forEach(c => {
+                    const item = document.createElement('a');
+                    item.href = '#';
+                    item.className = 'list-group-item list-group-item-action';
+                    item.textContent = c.text;
+                    item.onclick = function(e) {
+                        e.preventDefault();
+                        document.getElementById('selectedCustomerId').value = c.id;
+                        document.getElementById('selectedCustomerName').textContent = '✅ ' + c.name;
+                        document.getElementById('selectedCustomerName').style.display = 'block';
+                        document.getElementById('sendPromoBtn').disabled = false;
+                        resultsDiv.innerHTML = '';
+                        document.getElementById('customerSearchInput').value = c.name;
+                    };
+                    resultsDiv.appendChild(item);
+                });
+            });
+    }, 300);
+});
+
+function sendPromoCode() {
+    const customerId = document.getElementById('selectedCustomerId').value;
+    if (!customerId || !currentPromoId) return;
+
+    document.getElementById('sendPromoBtn').disabled = true;
+    document.getElementById('sendPromoBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>جاري الإرسال...';
+
+    const formData = new FormData();
+    formData.append('customer_id', customerId);
+
+    fetch(`/orders/promo-codes/${currentPromoId}/send/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('sendPromoModal')).hide();
+            location.reload();
+        } else {
+            alert(data.message);
+            document.getElementById('sendPromoBtn').disabled = false;
+            document.getElementById('sendPromoBtn').innerHTML = '<i class="fab fa-whatsapp me-1"></i>إرسال';
+        }
+    })
+    .catch(() => {
+        alert('حدث خطأ في الإرسال');
+        document.getElementById('sendPromoBtn').disabled = false;
+        document.getElementById('sendPromoBtn').innerHTML = '<i class="fab fa-whatsapp me-1"></i>إرسال';
+    });
+}
+
+function exportToExcel() {
+    // تصدير بنفس الفلاتر الحالية
+    const form = document.getElementById('filterForm');
+    const params = new URLSearchParams(new FormData(form)).toString();
+    window.location.href = '{% url "orders:promo_code_export" %}?' + params;
+}
+</script>
+{% endblock %}
