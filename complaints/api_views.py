@@ -25,7 +25,6 @@ from .models import (
     ComplaintUpdate,
     ResolutionMethod,
 )
-from .services.notification_service import notification_service
 
 
 @method_decorator(login_required, name="dispatch")

@@ -1048,30 +1048,31 @@
 <footer class="footer-area bg-primary py-3" id="main-footer">
     <div class="container-fluid">
         <div class="row align-items-center">
-            <!-- العمود الأول (يسار): معلومات الاتصال -->
-            <div class="col-md-4 footer-section contact-section text-start">
-                <div class="d-flex align-items-center gap-3">
-                    {% if company_info.email %}
-                        <a href="mailto:{{ company_info.email }}"
-                           class="footer-contact-item"
-                           title="البريد الإلكتروني">
-                            <i class="fas fa-at footer-icon-email"></i>
-                            <span class="d-none d-lg-inline small">{{ company_info.email }}</span>
-                        </a>
+            <!-- اليسار: اسم الشركة واللوغو -->
+            <div class="col-auto footer-section text-start">
+                <div class="d-flex align-items-center gap-2">
+                    {% if company_info.logo %}
+                        <img src="{{ company_info.logo.url }}" alt="{{ company_info.name }}"
+                             style="height: 28px; width: auto; filter: brightness(0) invert(1); opacity: 0.9;">
+                    {% else %}
+                        <img src="{% static 'images/favicon.png' %}" alt="الخواجة"
+                             style="height: 28px; width: auto; filter: brightness(0) invert(1); opacity: 0.9;">
                     {% endif %}
-                    {% if company_info.phone %}
-                        <a href="tel:{{ company_info.phone }}"
-                           class="footer-contact-item"
-                           title="رقم الهاتف">
-                            <i class="fas fa-phone-alt footer-icon-phone"></i>
-                            <span class="d-none d-lg-inline small">{{ company_info.phone }}</span>
-                        </a>
-                    {% endif %}
+                    <h6 class="footer-title mb-0">{{ company_info.name }}</h6>
                 </div>
             </div>
-            <!-- العمود الثاني (منتصف): الروابط السريعة -->
-            <div class="col-md-4 footer-section links-section text-center">
-                <div class="d-flex justify-content-center gap-4">
+            <!-- الوسط: الحقوق واسم المطور -->
+            <div class="col footer-section text-center">
+                <p class="copyright-text mb-0 small">
+                    <i class="far fa-copyright me-1"></i>
+                    {{ current_year }}
+                    جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات | تطوير
+                    <span class="developer-name">zakee tahawi</span>
+                </p>
+            </div>
+            <!-- اليمين: الروابط السريعة -->
+            <div class="col-auto footer-section text-end">
+                <div class="d-flex align-items-center gap-3">
                     <a href="{% url 'home' %}" class="footer-link" title="الرئيسية">
                         <i class="fas fa-home"></i>
                     </a>
@@ -1082,23 +1083,6 @@
                         <i class="fas fa-envelope text-primary"></i>
                     </a>
                 </div>
-            </div>
-            <!-- العمود الثالث (يمين): اسم الشركة والبراند -->
-            <div class="col-md-4 footer-section brand-section text-end">
-                <div class="d-flex align-items-center justify-content-end gap-2">
-                    <h6 class="footer-title mb-0">{{ company_info.name }}</h6>
-                    <i class="fas fa-building footer-icon-brand"></i>
-                </div>
-            </div>
-        </div>
-        <!-- سطر الحقوق السفلي -->
-        <div class="row mt-3 pt-2 border-top border-white border-opacity-10">
-            <div class="col-12 text-center">
-                <p class="copyright-text mb-0 small">
-                    <i class="far fa-copyright me-1"></i>
-                    {{ current_year }}
-                    {{ company_info.copyright_text|default:"جميع الحقوق محفوظة لشركة الخواجة للستائر والمفروشات تطوير zakee tahawi" }}
-                </p>
             </div>
         </div>
     </div>

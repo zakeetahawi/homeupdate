@@ -69,27 +69,30 @@ def create_notification(
             created_at__gte=recent_time,
         ).first()
 
-        # للإشعارات الحساسة، فحص أكثر دقة
-        if existing_notification and notification_type in [
-            "order_status_changed",
-            "manufacturing_status_changed",
-            "inspection_status_changed",
-            "installation_completed",
-        ]:
-            # فحص إذا كان نفس التغيير بالضبط
-            if (
-                extra_data
-                and existing_notification.extra_data
-                and extra_data.get("old_status")
-                == existing_notification.extra_data.get("old_status")
-                and extra_data.get("new_status")
-                == existing_notification.extra_data.get("new_status")
-            ):
-                logger.info(f"⚠️ تم تجاهل إشعار مكرر (نفس التغيير): {title}")
+        if existing_notification:
+            # للإشعارات الحساسة (تغيير حالة)، السماح بإشعار جديد فقط إذا كان تغييراً مختلفاً
+            if notification_type in [
+                "order_status_changed",
+                "manufacturing_status_changed",
+                "inspection_status_changed",
+                "installation_completed",
+            ]:
+                is_different_change = (
+                    extra_data
+                    and existing_notification.extra_data
+                    and (
+                        extra_data.get("old_status") != existing_notification.extra_data.get("old_status")
+                        or extra_data.get("new_status") != existing_notification.extra_data.get("new_status")
+                    )
+                )
+                if is_different_change:
+                    pass  # تغيير مختلف — السماح بإنشاء إشعار جديد
+                else:
+                    logger.info(f"⚠️ تم تجاهل إشعار مكرر (نفس التغيير): {title}")
+                    return existing_notification
+            else:
+                logger.info(f"⚠️ تم تجاهل إشعار مكرر: {title}")
                 return existing_notification
-        elif existing_notification:
-            logger.info(f"⚠️ تم تجاهل إشعار مكرر: {title}")
-            return existing_notification
 
     # إنشاء الإشعار
     notification = Notification.objects.create(
@@ -113,15 +116,20 @@ def create_notification(
             notification_type, related_object, created_by
         )
 
-    # إنشاء سجلات الرؤية
+    # إنشاء سجلات الرؤية مع منع التكرار
+    seen_ids = set()
     visibility_records = []
     for user in recipients:
-        visibility_records.append(
-            NotificationVisibility(notification=notification, user=user, is_read=False)
-        )
+        if user.pk not in seen_ids:
+            seen_ids.add(user.pk)
+            visibility_records.append(
+                NotificationVisibility(notification=notification, user=user, is_read=False)
+            )
 
     if visibility_records:
-        NotificationVisibility.objects.bulk_create(visibility_records)
+        NotificationVisibility.objects.bulk_create(
+            visibility_records, ignore_conflicts=True
+        )
 
     return notification
 

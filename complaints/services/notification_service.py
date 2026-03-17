@@ -72,10 +72,10 @@ def _create_main_notification(complaint, recipient, notification_type, title, me
         },
     )
 
-    NotificationVisibility.objects.create(
+    NotificationVisibility.objects.get_or_create(
         notification=notification,
         user=recipient,
-        is_read=False,
+        defaults={"is_read": False},
     )
 
     return notification
@@ -328,7 +328,8 @@ class ComplaintNotificationService:
                 # تحديث حالة الشكوى إلى متأخرة إذا لم تكن كذلك
                 if complaint.status != "overdue":
                     complaint.status = "overdue"
-                    complaint.save()
+                    # استخدام update_fields لتجنب تشغيل signals كاملة
+                    complaint.save(update_fields=["status", "updated_at"])
 
                 # إرسال تنبيه للمسؤول الحالي
                 if complaint.assigned_to:

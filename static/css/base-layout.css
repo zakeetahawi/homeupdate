@@ -434,6 +434,29 @@ html:not([data-theme="custom-theme"]):not([data-theme="ornamental"]) body .navba
     font-size: 0.7rem;
 }
 
+.developer-name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    background: linear-gradient(
+        90deg,
+        #d4af37 0%,
+        #f5e6a3 25%,
+        #d4af37 50%,
+        #f5e6a3 75%,
+        #d4af37 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmer 3s linear infinite;
+}
+
+@keyframes shimmer {
+    to { background-position: 200% center; }
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    7. RTL SweetAlert
    ═══════════════════════════════════════════════════════════════════ */

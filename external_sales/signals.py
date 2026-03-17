@@ -59,6 +59,17 @@ def auto_create_decorator_profile(sender, instance, created, **kwargs):
 
         ct = ContentType.objects.get_for_model(Customer)
 
+        # فحص التكرار — تجنب إنشاء إشعار مكرر لنفس العميل
+        from datetime import timedelta
+        recent = timezone.now() - timedelta(minutes=5)
+        if Notification.objects.filter(
+            notification_type="decorator_engineer_added",
+            content_type=ct,
+            object_id=instance.pk,
+            created_at__gte=recent,
+        ).exists():
+            return
+
         notification = Notification.objects.create(
             title=f"مهندس ديكور جديد: {instance.name}",
             message=(
@@ -82,8 +93,9 @@ def auto_create_decorator_profile(sender, instance, created, **kwargs):
             },
         )
         for manager in managers:
-            NotificationVisibility.objects.create(
-                notification=notification, user=manager
+            NotificationVisibility.objects.get_or_create(
+                notification=notification, user=manager,
+                defaults={"is_read": False},
             )
     except Exception as e:
         logger.error(f"Error sending decorator engineer notification: {e}")
