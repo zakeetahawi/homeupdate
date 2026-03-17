@@ -638,6 +638,31 @@ class DesignerCustomerSearchAjax(DecoratorDeptRequiredMixin, View):
 class OrderSearchAjax(DecoratorDeptRequiredMixin, View):
     """AJAX endpoint for Select2 order search."""
 
+    def get(self, request):
+        from orders.models import Order
+
+        q = request.GET.get("q", "").strip()
+        if len(q) < 2:
+            return JsonResponse({"results": []})
+        filters = Q(customer__name__icontains=q) | Q(customer__phone__icontains=q)
+        clean_q = q.replace("#", "").strip()
+        if clean_q.isdigit():
+            filters |= Q(id=int(clean_q))
+        orders = (
+            Order.objects.filter(filters)
+            .select_related("customer", "branch")
+            .only("pk", "customer__name", "customer__phone", "branch__name", "order_date")
+            .order_by("-id")[:20]
+        )
+        results = [
+            {
+                "id": o.pk,
+                "text": f"#{o.pk} — {o.customer.name} ({o.branch.name if o.branch else ''})",
+            }
+            for o in orders
+        ]
+        return JsonResponse({"results": results})
+
 
 class AllUpcomingFollowupsView(DecoratorDeptRequiredMixin, TemplateView):
     """صفحة مستقلة لجميع المتابعات القادمة"""

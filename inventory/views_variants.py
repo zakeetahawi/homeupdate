@@ -36,6 +36,7 @@ from .models import (
     PriceHistory,
     Product,
     ProductVariant,
+    StockTransaction,
     VariantStock,
     Warehouse,
 )
@@ -510,25 +511,51 @@ def global_bulk_price_update(request):
             value = Decimal("0")
 
         # --- Identify affected base products by warehouse filter ---
+        # نجلب من VariantStock (الجديد) + StockTransaction (القديم) لتغطية جميع المنتجات
         if all_warehouses_flag or not warehouse_ids:
-            # جميع المنتجات الأساسية النشطة بدون تصفية على المستودع
-            base_products = BaseProduct.objects.filter(
-                is_active=True
-            ).select_related("category").order_by("name")
+            wh_filter = {}
         else:
-            affected_variant_ids = VariantStock.objects.filter(
-                warehouse_id__in=warehouse_ids,
+            wh_filter = {"warehouse_id__in": warehouse_ids}
+
+        # المصدر 1: VariantStock (النظام الجديد)
+        vs_variant_ids = set(
+            VariantStock.objects.filter(
+                current_quantity__gt=0, **wh_filter
             ).values_list("variant_id", flat=True)
+        )
 
-            affected_bp_ids = (
-                ProductVariant.objects.filter(id__in=affected_variant_ids)
-                .values_list("base_product_id", flat=True)
-                .distinct()
-            )
+        # المصدر 2: StockTransaction (النظام القديم) - آخر running_balance > 0
+        from django.db.models import Max
+        latest_txn_ids = (
+            StockTransaction.objects.filter(**wh_filter)
+            .values("product_id", "warehouse_id")
+            .annotate(last_id=Max("id"))
+            .values_list("last_id", flat=True)
+        )
+        legacy_product_ids = set(
+            StockTransaction.objects.filter(
+                id__in=latest_txn_ids,
+                running_balance__gt=0,
+            ).values_list("product_id", flat=True)
+        )
+        legacy_variant_ids = set(
+            ProductVariant.objects.filter(
+                legacy_product_id__in=legacy_product_ids
+            ).values_list("id", flat=True)
+        )
 
-            base_products = BaseProduct.objects.filter(
-                id__in=affected_bp_ids, is_active=True
-            ).select_related("category").order_by("name")
+        # دمج المصدرين
+        all_variant_ids = vs_variant_ids | legacy_variant_ids
+
+        affected_bp_ids = (
+            ProductVariant.objects.filter(id__in=all_variant_ids)
+            .values_list("base_product_id", flat=True)
+            .distinct()
+        )
+
+        base_products = BaseProduct.objects.filter(
+            id__in=affected_bp_ids, is_active=True
+        ).select_related("category").order_by("name")
 
         # --- فلتر إضافي لسعر الجملة: فقط المنتجات التي لها سعر جملة حقيقي (> 0 وأقل من القطاعي) ---
         if price_type == "wholesale":
