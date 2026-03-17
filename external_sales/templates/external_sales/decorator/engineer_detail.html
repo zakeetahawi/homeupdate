@@ -267,26 +267,26 @@
         {% with linked_customers=profile.linked_customers.all %}
         {% if linked_customers %}
         <div class="table-responsive">
-            <table class="table table-sm table-hover">
+            <table class="table table-sm table-hover text-center align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>اسم العميل</th>
-                        <th>الفرع</th>
-                        <th>الهاتف</th>
-                        <th>العلاقة</th>
-                        <th>تاريخ الربط</th>
-                        <th>إجراءات</th>
+                        <th class="text-center align-middle">اسم العميل</th>
+                        <th class="text-center align-middle">الفرع</th>
+                        <th class="text-center align-middle">الهاتف</th>
+                        <th class="text-center align-middle">العلاقة</th>
+                        <th class="text-center align-middle">تاريخ الربط</th>
+                        <th class="text-center align-middle">إجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for lc in linked_customers %}
                     <tr>
-                        <td>{{ lc.customer.name }}</td>
-                        <td>{{ lc.customer.branch.name|default:"-" }}</td>
-                        <td dir="ltr">{{ lc.customer.phone|default:"-" }}</td>
-                        <td>{{ lc.get_relationship_type_display }}</td>
-                        <td>{{ lc.linked_at|date:"Y-m-d" }}</td>
-                        <td>
+                        <td class="text-center align-middle">{{ lc.customer.name }}</td>
+                        <td class="text-center align-middle">{{ lc.customer.branch.name|default:"-" }}</td>
+                        <td class="text-center align-middle" dir="ltr">{{ lc.customer.phone|default:"-" }}</td>
+                        <td class="text-center align-middle">{{ lc.get_relationship_type_display }}</td>
+                        <td class="text-center align-middle">{{ lc.linked_at|date:"Y-m-d" }}</td>
+                        <td class="text-center align-middle">
                             <a href="{% url 'external_sales:unlink_customer' profile.pk lc.pk %}" class="btn btn-outline-danger btn-sm quick-action-btn" onclick="return confirm('هل أنت متأكد من فك الربط؟')">
                                 <i class="fas fa-unlink"></i>
                             </a>
