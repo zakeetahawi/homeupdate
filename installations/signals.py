@@ -65,10 +65,25 @@ def installation_status_changed(sender, instance, created, **kwargs):
     # الحصول على المستخدم الحالي من thread local storage
     current_user = get_current_user()
 
+    old_status = getattr(instance, "_original_status", None)
+
+    # مزامنة حالة طلبات التعديل المرتبطة عند اكتمال التعديل أو التركيب
+    if not created and old_status and old_status != instance.status:
+        if instance.status in ("modification_completed", "completed"):
+            try:
+                updated = instance.modification_requests.filter(
+                    status__in=["pending", "manufacturing"]
+                ).update(status="completed")
+                if updated:
+                    logger.info(
+                        f"تم تحديث {updated} طلب تعديل إلى مكتمل تلقائياً للتركيب {instance.pk}"
+                    )
+            except Exception as e:
+                logger.error(f"خطأ في مزامنة طلبات التعديل للتركيب {instance.pk}: {e}")
+
     # إنشاء أرشيف تلقائي إذا تم إكمال التركيب
     if not created and instance.status == "completed":
         # التحقق من أن الحالة تغيرت إلى مكتملة
-        old_status = getattr(instance, "_original_status", None)
         if old_status and old_status != "completed":
             archive, created = InstallationArchive.objects.get_or_create(
                 installation=instance,
