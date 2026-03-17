@@ -60,6 +60,11 @@ echo -e "\n${BLUE}[3d] إنشاء بروفايلات مهندسي الديكور
 python manage.py create_decorator_profiles
 echo -e "${GREEN}  ✅ تم${NC}"
 
+# 3e. إعداد قالب الفاتورة الافتراضي (إنشاء أو استعادة إذا فارغ)
+echo -e "\n${BLUE}[3e] إعداد قالب الفاتورة الافتراضي...${NC}"
+python manage.py setup_invoice_template
+echo -e "${GREEN}  ✅ تم${NC}"
+
 # 4. إعادة تشغيل الخدمة عبر systemd
 echo -e "\n${BLUE}[4/4] إعادة تشغيل الخدمة...${NC}"
 if systemctl is-active --quiet run-production.service 2>/dev/null; then

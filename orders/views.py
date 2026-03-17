@@ -1120,6 +1120,19 @@ def invoice_print(request, order_number):
     company_info = CompanyInfo.objects.first()
     currency_symbol = system_settings.currency_symbol if system_settings else "ج.م"
 
+    # إذا لم يكن هناك محتوى مخصص من GrapesJS، نستخدم قالب Django المنسق
+    has_custom_content = template.html_content and len(template.html_content.strip()) > 50
+    if not has_custom_content:
+        context = {
+            "order": order,
+            "template": template,
+            "company_info": company_info,
+            "currency_symbol": currency_symbol,
+            "items": order.items.select_related("product"),
+            "payments": order.payments.all(),
+        }
+        return render(request, "orders/invoice_print.html", context)
+
     # إنشاء جدول العناصر مرة واحدة للاستخدام في كلا الفرعين (يشمل عمود الخصم وحساب الإجمالي بعد الخصم)
     items_html_rows = []
     for item in order.items.select_related("product"):
