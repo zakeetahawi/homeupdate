@@ -76,13 +76,25 @@ def get_user_orders_queryset(user):
             Q(selected_types__icontains="installation") | Q(created_by=user)
         )
 
-    # المبيعات الخارجية — طلبات العملاء المرتبطين بالمهندسين + طلبات عملاء الجملة والمهندسين
-    _es_roles = (
-        getattr(user, "is_external_sales_director", False)
-        or getattr(user, "is_decorator_dept_manager", False)
+    # قسم الديكور (مدير + موظف) — يرون فقط طلبات عملاء مهندسي الديكور (designer)
+    _decorator_roles = (
+        getattr(user, "is_decorator_dept_manager", False)
         or getattr(user, "is_decorator_dept_staff", False)
     )
-    if _es_roles:
+    if _decorator_roles:
+        from external_sales.models import EngineerLinkedOrder, EngineerLinkedCustomer
+        linked_order_ids = EngineerLinkedOrder.objects.values_list("order_id", flat=True)
+        linked_customer_ids = EngineerLinkedCustomer.objects.filter(
+            is_active=True
+        ).values_list("customer_id", flat=True)
+        return Order.objects.filter(
+            Q(id__in=linked_order_ids)
+            | Q(customer_id__in=linked_customer_ids)
+            | Q(customer__customer_type="designer")
+        )
+
+    # مدير المبيعات الخارجية — يرى طلبات عملاء الجملة ومهندسي الديكور
+    if getattr(user, "is_external_sales_director", False):
         from external_sales.models import EngineerLinkedOrder, EngineerLinkedCustomer
         linked_order_ids = EngineerLinkedOrder.objects.values_list("order_id", flat=True)
         linked_customer_ids = EngineerLinkedCustomer.objects.filter(

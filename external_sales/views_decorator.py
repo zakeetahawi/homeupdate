@@ -581,8 +581,20 @@ class CustomerSearchAjax(DecoratorDeptRequiredMixin, View):
         q = request.GET.get("q", "").strip()
         if len(q) < 2:
             return JsonResponse({"results": []})
+
+        # مدير/موظف قسم الديكور يرى فقط عملاء نوع مهندس ديكور
+        user = request.user
+        _decorator_only = (
+            getattr(user, "is_decorator_dept_manager", False)
+            or getattr(user, "is_decorator_dept_staff", False)
+        ) and not getattr(user, "is_external_sales_director", False)
+
+        base_qs = Customer.objects.all()
+        if _decorator_only:
+            base_qs = base_qs.filter(customer_type="designer")
+
         customers = (
-            Customer.objects.filter(
+            base_qs.filter(
                 Q(name__icontains=q)
                 | Q(phone__icontains=q)
                 | Q(code__icontains=q)
@@ -644,20 +656,24 @@ class OrderSearchAjax(DecoratorDeptRequiredMixin, View):
         q = request.GET.get("q", "").strip()
         if len(q) < 2:
             return JsonResponse({"results": []})
-        filters = Q(customer__name__icontains=q) | Q(customer__phone__icontains=q)
+        filters = (
+            Q(customer__name__icontains=q)
+            | Q(customer__phone__icontains=q)
+            | Q(order_number__icontains=q)
+        )
         clean_q = q.replace("#", "").strip()
         if clean_q.isdigit():
             filters |= Q(id=int(clean_q))
         orders = (
             Order.objects.filter(filters)
             .select_related("customer", "branch")
-            .only("pk", "customer__name", "customer__phone", "branch__name", "order_date")
+            .only("pk", "order_number", "customer__name", "customer__phone", "branch__name", "order_date")
             .order_by("-id")[:20]
         )
         results = [
             {
                 "id": o.pk,
-                "text": f"#{o.pk} — {o.customer.name} ({o.branch.name if o.branch else ''})",
+                "text": f"{o.order_number} — {o.customer.name} ({o.branch.name if o.branch else ''})",
             }
             for o in orders
         ]

@@ -24,13 +24,16 @@ def get_user_customers_queryset(user, search_term=None):
     if hasattr(user, "is_installation_manager") and user.is_installation_manager:
         return Customer.objects.all()
 
-    # المبيعات الخارجية — فقط عملاء الجملة ومهندسي الديكور
-    _es_roles = (
-        getattr(user, "is_external_sales_director", False)
-        or getattr(user, "is_decorator_dept_manager", False)
+    # قسم الديكور (مدير + موظف) — يرون فقط عملاء نوع مهندس ديكور
+    _decorator_roles = (
+        getattr(user, "is_decorator_dept_manager", False)
         or getattr(user, "is_decorator_dept_staff", False)
     )
-    if _es_roles:
+    if _decorator_roles:
+        return Customer.objects.filter(customer_type="designer")
+
+    # مدير المبيعات الخارجية — يرى عملاء الجملة ومهندسي الديكور
+    if getattr(user, "is_external_sales_director", False):
         return Customer.objects.filter(
             customer_type__in=["wholesale", "designer"]
         )
