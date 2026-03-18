@@ -549,30 +549,13 @@ def update_cutting_order_status(sender, instance, **kwargs):
 
     cutting_order = instance.cutting_order
 
-    # حفظ الحالة القديمة
+    # حفظ الحالة القديمة ثم تحديث عبر الدالة المركزية لضمان التوافق
     old_status = cutting_order.status
+    new_status = cutting_order.update_status()
 
-    # حساب إحصائيات العناصر
-    total_items = cutting_order.items.count()
-    completed_items = cutting_order.items.filter(status="completed").count()
-    pending_items = cutting_order.items.filter(status="pending").count()
-
-    # تحديث حالة أمر التقطيع
-    if completed_items == total_items and total_items > 0:
-        cutting_order.status = "completed"
-        cutting_order.completed_at = timezone.now()
-    elif completed_items > 0 and pending_items > 0:
-        cutting_order.status = "partially_completed"
-    elif pending_items == total_items:
-        cutting_order.status = "pending"
-
-    # حفظ فقط إذا تغيرت الحالة لتجنب تكرار السجلات
-    if old_status != cutting_order.status:
-        cutting_order.save()
-
-        # إرسال إشعار لمنشئ الطلب إذا اكتمل التقطيع
-        if cutting_order.status == "completed":
-            send_completion_notification(cutting_order)
+    # إرسال إشعار لمنشئ الطلب إذا اكتمل التقطيع
+    if old_status != new_status and new_status == "completed":
+        send_completion_notification(cutting_order)
 
 
 @receiver(post_save, sender=CuttingOrderItem)
@@ -1038,6 +1021,17 @@ def process_external_fabrics(order):
         if not target_warehouse:
             logger.warning(
                 f"⚠️ لم يتم تحديد مستودع للأقمشة الخارجية في إعدادات التصنيع. لن يتم إنشاء أوامر تقطيع لها."
+            )
+            return
+
+        # ⚠️ حماية: التأكد من أن المستودع المحدد هو المستودع الرئيسي (id=23)
+        # (لمنع إضافة أقمشة خارجية عن طريق الخطأ إلى مستودعات الفروع)
+        MAIN_WAREHOUSE_ID = 23
+        if target_warehouse.id != MAIN_WAREHOUSE_ID:
+            logger.error(
+                f"❌ حماية مفعّلة: مستودع الأقمشة الخارجية ({target_warehouse.name}, id={target_warehouse.id}) "
+                f"ليس المستودع الرئيسي (id={MAIN_WAREHOUSE_ID}). "
+                f"يجب تغيير الإعداد في لوحة التحكم → إعدادات التصنيع."
             )
             return
 

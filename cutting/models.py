@@ -238,19 +238,24 @@ class CuttingOrder(SoftDeleteMixin, models.Model):
         
         old_status = self.status
         
+        pending_items = self.items.filter(status='pending').count()
+
         if non_pending >= total_items:
             # جميع العناصر مكتملة أو مرفوضة
             self.status = 'completed'
             if not self.completed_at:
                 self.completed_at = timezone.now()
+        elif completed_items > 0 and pending_items > 0:
+            # بعض العناصر مكتملة وبعضها معلق
+            self.status = 'partially_completed'
         elif completed_items > 0 or self.items.filter(status='in_progress').exists():
             self.status = 'in_progress'
         else:
             self.status = 'pending'
-        
+
         if old_status != self.status:
             self.save(update_fields=['status', 'completed_at'])
-        
+
         return self.status
 
     def is_order_deleted(self):
