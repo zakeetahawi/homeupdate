@@ -386,126 +386,161 @@ def determine_warehouse_for_item(order_item, warehouses):
 
 @receiver(post_save, sender=OrderItem)
 def handle_order_item_creation(sender, instance, created, **kwargs):
-    """معالجة إنشاء عناصر الطلب وإنشاء أوامر التقطيع إذا لزم الأمر"""
+    """معالجة إنشاء عناصر الطلب وإنشاء أوامر التقطيع إذا لزم الأمر
 
-    if created:
-        order = instance.order
-        logger.info(f"🔍 تم إضافة عنصر جديد للطلب {order.order_number}")
+    ⚠️ يستخدم transaction.on_commit لضمان تنفيذه بعد create_cutting_orders_on_order_save
+    حيث أن Django ينفذ on_commit callbacks بترتيب التسجيل:
+    1. أولاً: Order.save() → create_cutting_orders (on_commit)
+    2. ثانياً: OrderItem.save() → handle_order_item_creation (on_commit)
+    هذا يحل مشكلة عدم وجود أوامر تقطيع عند إضافة عناصر جديدة
+    """
 
-        # التحقق من نوع الطلب - لا ننشئ أوامر تقطيع للمعاينة
-        selected_types = order.get_selected_types_list()
-        if "inspection" in selected_types:
+    if not created:
+        return
+
+    order = instance.order
+    order_item_id = instance.pk
+    order_id = order.pk
+
+    # التحقق المبكر من نوع الطلب - لا ننشئ أوامر تقطيع للمعاينة
+    selected_types = order.get_selected_types_list()
+    if "inspection" in selected_types:
+        logger.info(
+            f"⏭️ تخطي إنشاء أمر تقطيع للطلب {order.order_number} - يحتوي على معاينة"
+        )
+        return
+
+    # ✅ فحص المنتجات الخدمية (تركيب، تفصيل، نقل، معاينة) - لا ننشئ لها أوامر تقطيع
+    if instance.product:
+        service_product_codes = [
+            "005",
+            "006",
+            "007",
+            "008",
+            "0001",
+            "0002",
+            "0003",
+            "0004",
+        ]
+        service_keywords = ["تركيب", "تفصيل", "نقل", "معاينة", "مسمار"]
+
+        is_service_product = instance.product.code in service_product_codes or any(
+            keyword in instance.product.name for keyword in service_keywords
+        )
+
+        if is_service_product:
             logger.info(
-                f"⏭️ تخطي إنشاء أمر تقطيع للطلب {order.order_number} - يحتوي على معاينة"
+                f"🔧 تخطي إنشاء أمر تقطيع للمنتج الخدمي: {instance.product.name} (كود: {instance.product.code})"
             )
             return
 
-        # ✅ فحص المنتجات الخدمية (تركيب، تفصيل، نقل، معاينة) - لا ننشئ لها أوامر تقطيع
-        if instance.product:
-            service_product_codes = [
-                "005",
-                "006",
-                "007",
-                "008",
-                "0001",
-                "0002",
-                "0003",
-                "0004",
-            ]
-            service_keywords = ["تركيب", "تفصيل", "نقل", "معاينة", "مسمار"]
+    logger.info(f"🔍 تم إضافة عنصر جديد للطلب {order.order_number} - مجدول عبر on_commit")
 
-            is_service_product = instance.product.code in service_product_codes or any(
-                keyword in instance.product.name for keyword in service_keywords
-            )
-
-            if is_service_product:
-                logger.info(
-                    f"🔧 تخطي إنشاء أمر تقطيع للمنتج الخدمي: {instance.product.name} (كود: {instance.product.code})"
-                )
+    def _process_order_item():
+        """يتم تنفيذها بعد commit لضمان وجود أوامر التقطيع"""
+        try:
+            # إعادة تحميل من قاعدة البيانات لضمان البيانات المحدّثة
+            try:
+                order_item = OrderItem.objects.get(pk=order_item_id)
+            except OrderItem.DoesNotExist:
+                logger.warning(f"⚠️ عنصر الطلب {order_item_id} لم يعد موجوداً")
                 return
 
-        # التحقق من وجود أوامر تقطيع للطلب
-        existing_cutting_orders = CuttingOrder.objects.filter(order=order)
+            current_order = order_item.order
 
-        if existing_cutting_orders.exists():
-            # إضافة العنصر الجديد لأمر التقطيع المناسب
-            target_warehouse = determine_warehouse_for_item(
-                instance, Warehouse.objects.filter(is_active=True)
-            )
+            # التحقق من وجود أوامر تقطيع للطلب
+            existing_cutting_orders = CuttingOrder.objects.filter(order=current_order)
 
-            if target_warehouse:
-                cutting_order = existing_cutting_orders.filter(
-                    warehouse=target_warehouse
-                ).first()
-
-                if cutting_order:
-                    CuttingOrderItem.objects.create(
-                        cutting_order=cutting_order,
-                        order_item=instance,
-                        status="pending",
-                    )
+            if existing_cutting_orders.exists():
+                # التحقق من عدم وجود العنصر بالفعل في أوامر التقطيع
+                if CuttingOrderItem.objects.filter(order_item=order_item).exists():
                     logger.info(
-                        f"✅ تم إضافة عنصر جديد لأمر التقطيع {cutting_order.cutting_code}"
+                        f"⏭️ العنصر {order_item_id} موجود بالفعل في أمر تقطيع - تخطي"
                     )
+                    return
+
+                # إضافة العنصر الجديد لأمر التقطيع المناسب
+                target_warehouse = determine_warehouse_for_item(
+                    order_item, Warehouse.objects.filter(is_active=True)
+                )
+
+                if target_warehouse:
+                    cutting_order = existing_cutting_orders.filter(
+                        warehouse=target_warehouse
+                    ).first()
+
+                    if cutting_order:
+                        CuttingOrderItem.objects.create(
+                            cutting_order=cutting_order,
+                            order_item=order_item,
+                            status="pending",
+                        )
+                        logger.info(
+                            f"✅ تم إضافة عنصر جديد لأمر التقطيع {cutting_order.cutting_code}"
+                        )
+                    else:
+                        # إنشاء أمر تقطيع جديد لهذا المستودع
+                        cutting_order = CuttingOrder.objects.create(
+                            order=current_order,
+                            warehouse=target_warehouse,
+                            status="pending",
+                            notes=f"أمر تقطيع تلقائي للطلب {current_order.order_number} - مستودع {target_warehouse.name}",
+                        )
+
+                        CuttingOrderItem.objects.create(
+                            cutting_order=cutting_order,
+                            order_item=order_item,
+                            status="pending",
+                        )
+                        logger.info(
+                            f"✅ تم إنشاء أمر تقطيع جديد {cutting_order.cutting_code} للمستودع {target_warehouse.name}"
+                        )
                 else:
-                    # إنشاء أمر تقطيع جديد لهذا المستودع
+                    # المنتج غير موجود في أي مستودع - تخطي إنشاء أمر تقطيع
+                    product_info = (
+                        f"{order_item.product.name} (كود: {order_item.product.code})"
+                        if order_item.product
+                        else "غير محدد"
+                    )
+                    logger.warning(
+                        f"⏭️ تخطي العنصر {product_info} - المنتج غير موجود في أي مستودع نشط"
+                    )
+            else:
+                # لا يوجد أمر تقطيع - ننشئ واحد جديد (للطلبات القديمة أو حالات خاصة)
+                logger.info(
+                    f"📦 لا يوجد أمر تقطيع للطلب {current_order.order_number} - إنشاء أمر جديد"
+                )
+
+                # تحديد المستودع المناسب
+                target_warehouse = determine_warehouse_for_item(
+                    order_item, Warehouse.objects.filter(is_active=True)
+                )
+
+                if target_warehouse:
                     cutting_order = CuttingOrder.objects.create(
-                        order=order,
+                        order=current_order,
                         warehouse=target_warehouse,
                         status="pending",
-                        notes=f"أمر تقطيع تلقائي للطلب {order.order_number} - مستودع {target_warehouse.name}",
+                        notes=f"أمر تقطيع تلقائي للطلب {current_order.order_number} (تم إنشاؤه عند إضافة عنصر)",
                     )
 
                     CuttingOrderItem.objects.create(
-                        cutting_order=cutting_order,
-                        order_item=instance,
-                        status="pending",
+                        cutting_order=cutting_order, order_item=order_item, status="pending"
                     )
                     logger.info(
-                        f"✅ تم إنشاء أمر تقطيع جديد {cutting_order.cutting_code} للمستودع {target_warehouse.name}"
+                        f"✅ تم إنشاء أمر تقطيع {cutting_order.cutting_code} وإضافة العنصر"
                     )
-            else:
-                # المنتج غير موجود في أي مستودع - تخطي إنشاء أمر تقطيع
-                product_info = (
-                    f"{instance.product.name} (كود: {instance.product.code})"
-                    if instance.product
-                    else "غير محدد"
-                )
-                logger.warning(
-                    f"⏭️ تخطي العنصر {product_info} - المنتج غير موجود في أي مستودع نشط"
-                )
-        else:
-            # لا يوجد أمر تقطيع - ننشئ واحد جديد (هذا يحدث للطلبات القديمة أو في حالات خاصة)
-            logger.warning(
-                f"⚠️ لا يوجد أمر تقطيع للطلب {order.order_number} - إنشاء أمر جديد"
-            )
+                else:
+                    product_info = (
+                        f"{order_item.product.name} (كود: {order_item.product.code})"
+                        if order_item.product
+                        else "غير محدد"
+                    )
+                    logger.warning(f"⏭️ تخطي العنصر {product_info} - لا يوجد مستودع مناسب")
+        except Exception as e:
+            logger.error(f"❌ خطأ في معالجة عنصر الطلب {order_item_id}: {str(e)}")
 
-            # تحديد المستودع المناسب
-            target_warehouse = determine_warehouse_for_item(
-                instance, Warehouse.objects.filter(is_active=True)
-            )
-
-            if target_warehouse:
-                cutting_order = CuttingOrder.objects.create(
-                    order=order,
-                    warehouse=target_warehouse,
-                    status="pending",
-                    notes=f"أمر تقطيع تلقائي للطلب {order.order_number} (تم إنشاؤه عند إضافة عنصر)",
-                )
-
-                CuttingOrderItem.objects.create(
-                    cutting_order=cutting_order, order_item=instance, status="pending"
-                )
-                logger.info(
-                    f"✅ تم إنشاء أمر تقطيع {cutting_order.cutting_code} وإضافة العنصر"
-                )
-            else:
-                product_info = (
-                    f"{instance.product.name} (كود: {instance.product.code})"
-                    if instance.product
-                    else "غير محدد"
-                )
-                logger.warning(f"⏭️ تخطي العنصر {product_info} - لا يوجد مستودع مناسب")
+    transaction.on_commit(_process_order_item)
 
 
 @receiver(post_save, sender=CuttingOrderItem)
@@ -1044,12 +1079,12 @@ def process_external_fabrics(order):
         # إضافة العناصر
         count = 0
         for fabric in external_fabrics:
-            # التحقق من عدم التكرار (بناءً على الاسم والكمية لأن ليس لدينا ID طلب)
+            # التحقق من عدم التكرار بناءً على fabric_id المُخزّن في notes
+            # (يمنع التكرار عند استدعاء الدالة مرتين، دون تجاهل ستائر مختلفة بنفس القماش والطول)
             exists = CuttingOrderItem.objects.filter(
                 cutting_order=cutting_order,
                 is_external=True,
-                external_fabric_name=fabric.fabric_name,
-                quantity=fabric.meters,  # مقارنة الكمية أيضاً للتأكد
+                notes__contains=f"[fabric_id:{fabric.id}]",
             ).exists()
 
             if not exists:
@@ -1060,7 +1095,7 @@ def process_external_fabrics(order):
                     external_fabric_name=fabric.fabric_name,
                     quantity=fabric.meters,
                     status="pending",
-                    notes=f"قماش خارجي: {fabric.fabric_type} - {fabric.pieces} قطعة",
+                    notes=f"قماش خارجي: {fabric.fabric_type} - {fabric.pieces} قطعة [fabric_id:{fabric.id}]",
                 )
                 count += 1
 
